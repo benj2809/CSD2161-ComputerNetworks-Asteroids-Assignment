@@ -2,6 +2,7 @@
 .vs/
 
 # build directories
+Asteroids/CSD1130_Asteroids/x64/
 x64/
 x86/
 Debug/
