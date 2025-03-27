@@ -13,6 +13,8 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 /******************************************************************************/
 
 #include "main.h"
+#include "iostream"
+#include <string>           // For string manipulation
 #include <memory>
 
 // ---------------------------------------------------------------------------
@@ -38,6 +40,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 
 	//int * pi = new int;
 	////delete pi;
+	//Get server ip and port from the user.
 
 
 	// Initialize the system
@@ -49,10 +52,21 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	//set background color
 	AEGfxSetBackgroundColor(0.0f, 0.0f, 0.0f);
 
-
-
 	GameStateMgrInit(GS_ASTEROIDS);
 
+	std::string serverIP;
+	std::string server_Port;
+	uint16_t serverPort;
+	std::string path = {"../Resources/ClientInfo/client.txt"};
+	
+	// Initialize and run the client
+	Client client;
+	client.getServerInfo(path, serverIP, server_Port);
+	serverPort = static_cast<uint16_t>(std::stoul(server_Port));
+	if (!client.initialize(serverIP, serverPort)) {
+		std::cerr << "Client initialization failed." << std::endl;
+		return RETURN_CODE_1; 
+	}
 	while(gGameStateCurr != GS_QUIT)
 	{
 		// reset the system modules
@@ -75,6 +89,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 				AESysFrameStart();
 
 				GameStateUpdate();
+				client.run();
 
 				GameStateDraw();
 
