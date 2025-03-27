@@ -2,6 +2,7 @@
 .vs/
 Asteroids/.vs
 Server_Project/.vs
+Asteroids/Bin
 
 # build directories
 Asteroids/CSD1130_Asteroids/x64/

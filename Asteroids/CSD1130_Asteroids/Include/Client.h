@@ -40,7 +40,11 @@ enum CMDID : unsigned char {
     CMD_TEST = 0x20,        // Test command
     ECHO_ERROR = 0x30       // Error in echo operation
 };
-
+struct UdpClientData {
+    sockaddr_in clientAddr;
+    char data[1024];  // Buffer for incoming data
+    int dataSize;     // Size of the incoming data
+};
 /**
  * Client class that encapsulates all client functionality.
  * Manages socket connection, network I/O, and user interaction.
@@ -72,6 +76,7 @@ public:
      */
     void runScript(const std::string& scriptPath);
     void getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port);
+    void sendToServerUdp();
 private:
     SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection
     std::mutex mutex;                      // Mutex for thread synchronization

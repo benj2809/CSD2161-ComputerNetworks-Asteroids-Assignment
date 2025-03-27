@@ -1,5 +1,6 @@
 #include "Client.h"
-
+#include "AEEngine.h"
+#include "GameState_Asteroids.h"
 /**
  * Initialize the client with server connection details
  * @param serverIP The IP address of the server to connect to
@@ -14,7 +15,7 @@ bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
     if (!setupWinsock()) return false;
     if (!resolveAddress(serverIP, serverPort)) return false;
     if (!createSocket()) return false;
-    if (!connectToServer()) return false;
+   // if (!connectToServer()) return false;
 
     return true;
 }
@@ -29,7 +30,8 @@ void Client::run() {
     networkThread.detach();
 
     // Process user input on the main thread
-    handleUserInput();
+    //handleUserInput();
+    sendToServerUdp();//sends a message to the server.
 }
 
 /**
@@ -42,7 +44,8 @@ void Client::runScript(const std::string& scriptPath) {
     networkThread.detach();
 
     // Process script commands
-    handleScript(scriptPath);
+    //handleScript(scriptPath);
+    sendToServerUdp();
 }
 
 void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::string& port)
@@ -59,6 +62,61 @@ void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::s
 
     file.close();  // Close the file
 }
+
+void Client::sendToServerUdp() {
+
+    ////get position of th ship.
+    AEVec2 position = returnPosition();
+
+   // const std::string message = "Hello World";  // Message to send
+    std::string message = "ship position -> xCoord:" + std::to_string(position.x) + "yCoord: " + std::to_string(position.y);
+    //std::cout << positon_1.c_str() << std::endl;
+    // Prepare the UdpClientData structure
+    UdpClientData udpMessage;
+    ZeroMemory(&udpMessage, sizeof(udpMessage));  // Clear the struct to avoid leftover data
+
+    // Copy the message into the structure using strncpy_s
+    errno_t err = strncpy_s(udpMessage.data, sizeof(udpMessage.data), message.c_str(), message.length());
+    if (err != 0) {
+        std::cerr << "Error copying message to buffer." << std::endl;
+        return;
+    }
+
+    // Setup address hints structure
+    addrinfo hints{};
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;        // IPv4
+    hints.ai_socktype = SOCK_DGRAM;  // UDP (use SOCK_DGRAM instead of SOCK_STREAM)
+    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+
+    // Get address information for the server
+    addrinfo* result = nullptr;
+    if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
+        std::cerr << "getaddrinfo failed." << std::endl;
+        return;
+    }
+
+    // Fill in the clientAddr in the structure
+    udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
+
+    // Send message to the server using the pre-existing socket
+    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
+        reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr));
+
+    if (sendResult == SOCKET_ERROR) {
+        std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
+    }
+    else {
+        std::cout << "Message sent: " << udpMessage.data << std::endl;
+    }
+
+    // Clean up
+    freeaddrinfo(result);  // Free the address info as it's no longer needed
+}
+
+
+
+
 
 /**
  * Initialize the Winsock library
@@ -169,13 +227,17 @@ void Client::handleNetwork() {
             break;
         }
 
-        // Add received data to the processing queue
-        recvQueue.insert(recvQueue.end(), recvBuffer, recvBuffer + receivedBytes);
+        // Print out the message received from the server
+        std::cout << "Received message from server: " << std::string(recvBuffer, recvBuffer + receivedBytes) << std::endl;
 
-        // Process received data
-        processReceivedData(recvQueue);
+        //// Optionally add received data to the processing queue (if needed for future processing)
+        //recvQueue.insert(recvQueue.end(), recvBuffer, recvBuffer + receivedBytes);
+
+        //// Process received data if needed
+        //processReceivedData(recvQueue);
     }
 }
+
 
 /**
  * Process commands from a script file

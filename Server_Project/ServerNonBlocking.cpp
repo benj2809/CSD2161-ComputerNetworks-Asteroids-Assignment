@@ -51,6 +51,11 @@ enum class CommandID : unsigned char {
     CMD_TEST = 0x20, // Test command (not used)
     ECHO_ERROR = 0x30  // Server indicates an echo error
 };
+struct UdpClientData {
+    sockaddr_in clientAddr;
+    char data[1024];  // Buffer for incoming data
+    int dataSize;     // Size of the incoming data
+};
 
 // Server class to encapsulate server functionality
 class Server {
@@ -76,14 +81,14 @@ private:
     bool resolveAddress(const std::string& port);
     // Create the listener socket
     bool createListener();
-    //create UDP listener.
-    bool createSocket();
     // Bind the listener socket to the server's address
     bool bindListener();
     // Start listening for incoming connections
     bool startListening();
     // Handle a connected client
     void handleClient(SOCKET clientSocket);
+    //handling UDP client data.
+    void handleUdpClient(UdpClientData messsage);
     // Forward an echo message to another client
     void forwardEchoMessage(char* buffer, int length, const std::string& senderKey);
     // Send the list of connected users to a client
@@ -117,7 +122,7 @@ bool Server::initialize(const std::string& port) {
     this->port = port; // Initialize the port member variable
     if (!setupWinsock()) return false; // Set up Winsock
     if (!resolveAddress(port)) return false; // Resolve the server's address
-    if (!createSocket()) return false; // Create the listener socket
+    if (!createListener()) return false; // Create the listener socket
     if (!bindListener()) return false; // Bind the listener socket
     //if (!startListening()) return false; // Start listening for connections
 
@@ -126,29 +131,49 @@ bool Server::initialize(const std::string& port) {
 
 // Run the server
 void Server::run() {
-    // Wrap handleClient in a lambda to make it compatible with TaskQueue
-    auto action = [this](SOCKET socket) {
-        handleClient(socket); // Each worker will call recvfrom() internally
-        return true;
+    // Define the action lambda to handle UDP messages
+    auto action = [this](UdpClientData message) {
+        handleUdpClient(message); // Handle the UDP message
+        return true; // Ensure the lambda returns a boolean
         };
 
-    // Define the onDisconnect lambda (not really needed for UDP)
+    // Define the onDisconnect lambda (though for UDP, disconnect isn't needed)
     const auto onDisconnect = [&]() {
-        shutdown(listenerSocket, SD_BOTH);
-        closesocket(listenerSocket);
+        closesocket(listenerSocket); // Close the listener socket
         return true;
         };
 
-    // Initialize TaskQueue with SOCKET instead of message data
-    auto tq = TaskQueue<SOCKET, decltype(action), decltype(onDisconnect)>{
+    // Initialize TaskQueue with the correct parameters
+    auto tq = TaskQueue<UdpClientData, decltype(action), decltype(onDisconnect)>{
         10, 20, action, onDisconnect
     };
 
-    // Main server loop for UDP
+    // Main server loop: Use recvfrom() to receive UDP messages
     while (true) {
-        tq.produce(listenerSocket); // Always add the same listener socket to the queue
+        sockaddr_in clientAddr{};
+        socklen_t clientAddrSize = sizeof(clientAddr);
+        char buffer[1024];  // Buffer to hold incoming data
+
+        // Receive the UDP message from the client
+        int bytesReceived = recvfrom(listenerSocket, buffer, sizeof(buffer), 0,
+            (sockaddr*)&clientAddr, &clientAddrSize);
+
+        if (bytesReceived == SOCKET_ERROR) {
+            //std::cerr << "Receive failed." << std::endl;
+            continue;
+        }
+
+        // Create the UdpClientData object with received data
+        UdpClientData clientData;
+        clientData.clientAddr = clientAddr;
+        memcpy(clientData.data, buffer, bytesReceived);
+        clientData.dataSize = bytesReceived;
+
+        // Add the client data to the task queue for processing by worker threads
+        tq.produce(clientData);
     }
 }
+
 
 // Set up Winsock
 bool Server::setupWinsock() {
@@ -165,13 +190,13 @@ bool Server::setupWinsock() {
 bool Server::resolveAddress(const std::string& port) {
     addrinfo hints{};
     SecureZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;        // Use IPv4
-    hints.ai_socktype = SOCK_DGRAM;   // Use UDP (change from SOCK_STREAM)
-    hints.ai_protocol = IPPROTO_UDP;  // Use UDP protocol (change from IPPROTO_TCP)
-    hints.ai_flags = AI_PASSIVE;      // Use the server's IP address
+    hints.ai_family = AF_INET; // Use IPv4
+    hints.ai_socktype = SOCK_DGRAM; // Use UDP
+    hints.ai_protocol = IPPROTO_UDP; // Use UDP
+    hints.ai_flags = AI_PASSIVE; // Use the server's IP address
 
     char host[MAX_STR_LEN];
-    gethostname(host, MAX_STR_LEN);   // Get the server's hostname
+    gethostname(host, MAX_STR_LEN); // Get the server's hostname
 
     addrinfo* info = nullptr;
     int errorCode = getaddrinfo(host, port.c_str(), &hints, &info);
@@ -188,24 +213,14 @@ bool Server::resolveAddress(const std::string& port) {
     std::cout << "Server IP Address: " << serverIPAddr << std::endl;
     std::cout << "Server Port Number: " << port << std::endl;
 
-    freeaddrinfo(info);  // Free the address info
-    return true;
-}
-
-bool Server::createSocket() {
-    listenerSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);  // Use SOCK_DGRAM for UDP
-    if (listenerSocket == INVALID_SOCKET) {
-        std::cerr << "Socket creation failed." << std::endl;
-        WSACleanup();
-        return false;
-    }
+    freeaddrinfo(info); // Free the address info
     return true;
 }
 
 
 // Create the listener socket
 bool Server::createListener() {
-    listenerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    listenerSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); // Changed to SOCK_DGRAM for UDP
     if (listenerSocket == INVALID_SOCKET) {
         std::cerr << "Socket creation failed." << std::endl;
         WSACleanup();
@@ -214,11 +229,12 @@ bool Server::createListener() {
     return true;
 }
 
+
 // Bind the listener socket to the server's address
 bool Server::bindListener() {
     sockaddr_in serverAddr{};
-    serverAddr.sin_family = AF_INET;              // Use IPv4
-    serverAddr.sin_addr.s_addr = INADDR_ANY;      // Bind to any available interface
+    serverAddr.sin_family = AF_INET; // Use IPv4
+    serverAddr.sin_addr.s_addr = INADDR_ANY; // Bind to any available interface
     serverAddr.sin_port = htons(std::stoi(port)); // Convert port to network byte order
 
     if (bind(listenerSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
@@ -229,7 +245,6 @@ bool Server::bindListener() {
     }
     return true;
 }
-
 
 // Start listening for incoming connections
 bool Server::startListening() {
@@ -244,39 +259,93 @@ bool Server::startListening() {
 
 // Handle a connected client
 void Server::handleClient(SOCKET clientSocket) {
-    sockaddr_in clientAddr{};  // Store client address
+    sockaddr_in clientAddr{};
     int addrSize = sizeof(clientAddr);
-    char buffer[MAX_STR_LEN] = {}; // Buffer for received data
+    getpeername(clientSocket, (sockaddr*)&clientAddr, &addrSize); // Get client's address
 
-    // Receive a message from any client
-    int bytesReceived = recvfrom(clientSocket, buffer, sizeof(buffer), 0,
-        (sockaddr*)&clientAddr, &addrSize);
-
-    if (bytesReceived == SOCKET_ERROR) {
-        std::cerr << "recvfrom() failed: " << WSAGetLastError() << std::endl;
-        return;
-    }
-
-    // Convert client address to readable format
     char clientIP[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
-    uint16_t clientPort = ntohs(clientAddr.sin_port);
-    std::string clientKey = std::string(clientIP) + ":" + std::to_string(clientPort);
+    inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN); // Convert IP to string
+    uint16_t clientPort = ntohs(clientAddr.sin_port); // Convert port to host byte order
+    std::string clientKey = std::string(clientIP) + ":" + std::to_string(clientPort); // Create client key
 
-    std::cout << "Message received from: " << clientKey << std::endl;
-
-    // Send acknowledgment message to client
-    const char* ackMessage = "Connected to server";
-    int bytesSent = sendto(clientSocket, ackMessage, strlen(ackMessage), 0,
-        (sockaddr*)&clientAddr, addrSize);
-
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "sendto() failed: " << WSAGetLastError() << std::endl;
-        return;
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
+        clients[clientKey] = clientSocket; // Add the client to the map
     }
 
-    std::cout << "Sent acknowledgment to " << clientKey << std::endl;
+    std::cout << "Client connected: " << clientKey << std::endl;
+
+    char buffer[MAX_STR_LEN] = {};
+    while (true) {
+        int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0); // Receive data from the client
+        if (bytesRead <= 0) {
+            std::cout << "Client disconnected: " << clientKey << std::endl;
+            break;
+        }
+
+        CommandID commandID = static_cast<CommandID>(buffer[0]); // Extract the command ID
+        switch (commandID) {
+        case CommandID::REQ_QUIT:
+            std::cout << "Client requested to quit: " << clientKey << std::endl;
+            break;
+        case CommandID::REQ_ECHO:
+            forwardEchoMessage(buffer, bytesRead, clientKey); // Forward the echo message
+            break;
+        case CommandID::REQ_LISTUSERS:
+            sendUserList(clientSocket); // Send the list of users
+            break;
+        default:
+            std::cerr << "Unhandled command ID: " << static_cast<int>(commandID) << std::endl;
+            break;
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
+        clients.erase(clientKey); // Remove the client from the map
+    }
+
+    shutdown(clientSocket, SD_BOTH); // Shutdown the client socket
+    closesocket(clientSocket); // Close the client socket
 }
+
+void Server::handleUdpClient(UdpClientData message)
+{
+    // Unpack the message and client address from the incoming message
+    const char* messageData = message.data; // Message content
+    sockaddr_in clientAddr = message.clientAddr; // Client address
+
+    // Null-terminate the message if it's not already null-terminated
+    message.data[message.dataSize] = '\0';  // Ensure null-termination at the end
+
+    // Get client IP and port
+    char clientIp[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &clientAddr.sin_addr, clientIp, sizeof(clientIp));
+    int clientPort = ntohs(clientAddr.sin_port);
+
+    // Print the message along with client IP and port
+    std::cout << "Received message from client (" << clientIp << ":" << clientPort << "): "
+        << messageData << std::endl;
+
+    // Create the message to send back, prepending "Message from server: "
+    std::string serverMessage = "This is a Message from server:" + std::string(messageData);
+
+    // Send the message back to the client (echoing it with the prefix)
+    int sendResult = sendto(listenerSocket, serverMessage.c_str(), serverMessage.length(), 0,
+        reinterpret_cast<sockaddr*>(&clientAddr), sizeof(clientAddr));
+
+    if (sendResult == SOCKET_ERROR) {
+        std::cerr << "Failed to send message to client." << std::endl;
+    }
+    else {
+        std::cout << "Echoed message to client: " << serverMessage << std::endl;
+    }
+
+    // Free up the thread (the thread will exit when the task completes)
+}
+
+
+
 
 
 // Forward an echo message to another client

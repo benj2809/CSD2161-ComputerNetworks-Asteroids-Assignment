@@ -1,7 +1,25 @@
-﻿  Collision.cpp
-  GameStateMgr.cpp
-  GameState_Asteroids.cpp
-  Main.cpp
-  Generating Code...
-  LINK : C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\\Bin\CSD1130_AsteroidsD.exe not found or not built by the last incremental link; performing full link
-  CSD1130_Asteroids.vcxproj -> C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
+﻿  Client.cpp
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/Client.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(10,44): warning C4458: declaration of 'serverIP' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(83,17):
+      see declaration of 'Client::serverIP'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(10,63): warning C4458: declaration of 'serverPort' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(84,14):
+      see declaration of 'Client::serverPort'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(41,43): warning C4100: 'scriptPath': unreferenced formal parameter
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(103,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(140,48): warning C4458: declaration of 'serverIP' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(83,17):
+      see declaration of 'Client::serverIP'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(140,67): warning C4458: declaration of 'serverPort' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(84,14):
+      see declaration of 'Client::serverPort'
+  
+  CSD1130_Asteroids.vcxproj -> C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
