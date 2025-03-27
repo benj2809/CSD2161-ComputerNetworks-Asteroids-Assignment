@@ -496,6 +496,8 @@ void GameStateAsteroidsUpdate(void)
 														AEGfxGetWinMaxX() + SHIP_SCALE_X);
 			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - SHIP_SCALE_Y,   // Likewise, wrapping the y-coordinates of the ship to the opposite end of the screen, should it go out of bounds.
 														AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+			//update ship position
+			finalPosition = { pInst->posCurr.x, pInst->posCurr.y };
 		}
 
 		// Wrap asteroids here
@@ -632,6 +634,11 @@ void GameStateAsteroidsUnload(void)
 		AEGfxMeshFree(pObject->pMesh); // Freeing the mesh.
 		pObject->pMesh = NULL; // Setting it to NULL after freeing.
 	}
+}
+
+AEVec2 returnPosition()
+{
+	return finalPosition;
 }
 
 /******************************************************************************/

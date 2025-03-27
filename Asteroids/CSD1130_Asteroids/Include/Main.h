@@ -31,7 +31,7 @@ extern double	g_appTime;
 #include "GameStateMgr.h"
 #include "GameState_Asteroids.h"
 #include "Collision.h"
-
+#include "Client.h"
 
 #endif
 

@@ -30,7 +30,8 @@ void GameStateAsteroidsUpdate(void);
 void GameStateAsteroidsDraw(void);
 void GameStateAsteroidsFree(void);
 void GameStateAsteroidsUnload(void);
-
+static AEVec2 finalPosition;
+AEVec2 returnPosition();
 // ---------------------------------------------------------------------------
 
 #endif // CSD1130_GAME_STATE_PLAY_H_
