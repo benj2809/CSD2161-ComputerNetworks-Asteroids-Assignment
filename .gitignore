@@ -1,0 +1,15 @@
+# .vs
+.vs/
+
+# build directories
+x64/
+x86/
+Debug/
+Release/
+build/
+
+# temporary / backup files
+*.tmp
+*.bak
+*.swp
+*.sln.docstates
