@@ -1,10 +1,10 @@
-# .vs
+# Ignore Visual Studio related files
 .vs/
-Asteroids/.vs
-Server_Project/.vs
-Asteroids/Bin
+Asteroids/.vs/
+Server_Project/.vs/
 
-# build directories
+# Ignore build directories
+Asteroids/Bin/
 Asteroids/CSD1130_Asteroids/x64/
 Server_Project/x64/
 x64/
@@ -13,7 +13,21 @@ Debug/
 Release/
 build/
 
-# temporary / backup files
+# Ignore compiled binaries and intermediate files
+*.exe
+*.dll
+*.ilk
+*.lib
+*.pdb
+*.obj
+*.idb
+*.iobj
+*.ipdb
+*.tlog
+
+# Ignore database and backup files
+*.suo
+*.db
 *.tmp
 *.bak
 *.swp
