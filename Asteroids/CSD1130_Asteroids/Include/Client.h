@@ -22,6 +22,9 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <sstream>
+
+#include <unordered_map>
 
 // Return code constants for different exit conditions
 constexpr int RETURN_CODE_1 = 1; // General failure
@@ -77,11 +80,24 @@ public:
     void runScript(const std::string& scriptPath);
     void getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port);
     void sendToServerUdp();
+
+    // Get player count
+    static const int getPlayerCount() { return pCount; }
+    
+    // Get player ID for this client
+    static const int getPlayerID() { return playerID; }
+
 private:
     SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection
     std::mutex mutex;                      // Mutex for thread synchronization
     std::string serverIP;                  // Server IP address
     uint16_t serverPort;                   // Server port number
+
+    // Player count
+    static int pCount;
+
+    // Player ID
+    static int playerID;
 
     /**
      * Initialize the Winsock library
@@ -127,6 +143,11 @@ private:
     void handleUserInput();
 
     /**
+    * 
+    */
+    void handleID();
+
+    /**
      * Send a message to the server
      * @param message The message to send as a vector of bytes
      */
@@ -144,3 +165,12 @@ private:
      */
     void cleanup();
 };
+
+struct playerData {
+    int playerID;
+    float x, y;		// Position
+    std::string cIP;
+    // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
+};
+
+extern std::unordered_map<int, playerData> players;

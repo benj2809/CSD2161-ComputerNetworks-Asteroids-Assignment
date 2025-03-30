@@ -21,6 +21,9 @@
     <ClInclude Include="taskqueue.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="playerdata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ServerNonBlocking.cpp">

@@ -1,6 +1,13 @@
 #include "Client.h"
 #include "AEEngine.h"
 #include "GameState_Asteroids.h"
+
+int Client::pCount;
+
+int Client::playerID = -1; // Store client's player ID
+
+std::unordered_map<int, playerData> players;
+
 /**
  * Initialize the client with server connection details
  * @param serverIP The IP address of the server to connect to
@@ -10,6 +17,8 @@
 bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
     this->serverIP = serverIP;     // Store server IP
     this->serverPort = serverPort; // Store server port
+
+    pCount = 0;
 
     // Perform initialization steps in sequence
     if (!setupWinsock()) return false;
@@ -26,12 +35,17 @@ bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
  */
 void Client::run() {
     // Create and detach network handling thread
+    sendToServerUdp();//sends a message to the server.
+
+    /*  std::thread idThread(&Client::handleID, this);
+    idThread.detach();*/
+
     std::thread networkThread(&Client::handleNetwork, this);
     networkThread.detach();
 
     // Process user input on the main thread
     //handleUserInput();
-    sendToServerUdp();//sends a message to the server.
+
 }
 
 /**
@@ -68,9 +82,9 @@ void Client::sendToServerUdp() {
     ////get position of th ship.
     AEVec2 position = returnPosition();
 
-   // const std::string message = "Hello World";  // Message to send
-    std::string message = "ship position -> xCoord:" + std::to_string(position.x) + "yCoord: " + std::to_string(position.y);
-    //std::cout << positon_1.c_str() << std::endl;
+    // const std::string message = "Hello World";  // Message to send
+    std::string message = std::to_string(position.x) + " " + std::to_string(position.y);
+    //std::cout << position_1.c_str() << std::endl;
     // Prepare the UdpClientData structure
     UdpClientData udpMessage;
     ZeroMemory(&udpMessage, sizeof(udpMessage));  // Clear the struct to avoid leftover data
@@ -100,15 +114,15 @@ void Client::sendToServerUdp() {
     udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
 
     // Send message to the server using the pre-existing socket
-    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
+    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data   ), 0,
         reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr));
 
     if (sendResult == SOCKET_ERROR) {
         std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
     }
-    else {
+    /*else {
         std::cout << "Message sent: " << udpMessage.data << std::endl;
-    }
+    }*/
 
     // Clean up
     freeaddrinfo(result);  // Free the address info as it's no longer needed
@@ -214,30 +228,76 @@ void Client::handleNetwork() {
         int receivedBytes = recvfrom(clientSocket, recvBuffer, sizeof(recvBuffer), 0,
             (sockaddr*)&serverAddr, &addrSize);
 
-        if (receivedBytes == SOCKET_ERROR) {
-            int errorCode = WSAGetLastError();
-            if (errorCode == WSAEWOULDBLOCK) {
-                // Non-blocking operation would block, try again later
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
-            // Other error occurred
-            std::lock_guard<std::mutex> lock(mutex);
-            std::cerr << "recvfrom() failed with error: " << errorCode << std::endl;
-            break;
-        }
+        //if (receivedBytes == SOCKET_ERROR) {
+        //    int errorCode = WSAGetLastError();
+        //    if (errorCode == WSAEWOULDBLOCK) {
+        //        // Non-blocking operation would block, try again later
+        //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //        continue;
+        //    }
+        //    // Other error occurred
+        //    std::lock_guard<std::mutex> lock(mutex);
+        //    std::cerr << "recvfrom() failed with error: " << errorCode << std::endl;
+        //    break;
+        //}
 
         // Print out the message received from the server
-        std::cout << "Received message from server: " << std::string(recvBuffer, recvBuffer + receivedBytes) << std::endl;
+        // [Number of players] [Player ID] [Player X position] [Player Y position [Player IP]
+        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
+
+        if (receivedBytes > 0 && playerID == -1) { // Only set once
+            playerID = std::stoi(recvBuffer); // Convert received ID to integer
+            std::cout << "Received My Player ID: " << playerID << std::endl;
+            return;
+        }
+
+        //std::cout << "Received message from server: " << pData << std::endl;
+
+        std::istringstream str(pData);
+
+        // std::unordered_map<std::string, playerData> updatedPlayers;
+
+        playerData p;
+
+        while (str >> p.playerID >> p.x >> p.y >> p.cIP) {
+            players[p.playerID] = p;  // Store new player data
+        }
+
+        pCount = players.size();
+        // Replace old player data with the updated one
+        // players = std::move(updatedPlayers);
+        // std::cout << "Created new player: " << p.playerID << " " << p.x << " " << p.y << " " << players.size() << std::endl;
 
         //// Optionally add received data to the processing queue (if needed for future processing)
         //recvQueue.insert(recvQueue.end(), recvBuffer, recvBuffer + receivedBytes);
 
         //// Process received data if needed
-        //processReceivedData(recvQueue);
+        //processReceivedData(recvQueue
+
+        // Debug
+        /*for (const auto& pair : players) {
+            int id = pair.first;
+            playerData player = pair.second;
+            std::cout << "Player " << id << ": (" << player.x << ", " << player.y << ")\n";
+        }*/
     }
 }
 
+// Remove
+void Client::handleID() {
+    // std::vector<uint8_t> recvQueue;  // Buffer for incoming data
+    sockaddr_in serverAddr{};        // Store server's address
+    int addrSize = sizeof(serverAddr);
+
+    char recvBuffer[1024];  // Temporary buffer for received data
+    int receivedBytes = recvfrom(clientSocket, recvBuffer, sizeof(recvBuffer), 0,
+        (sockaddr*)&serverAddr, &addrSize);
+
+    if (receivedBytes > 0 && playerID == -1) { // Only set once
+        playerID = std::stoi(recvBuffer); // Convert received ID to integer
+        std::cout << "Received My Player ID: " << playerID << std::endl;
+    }
+}
 
 /**
  * Process commands from a script file

@@ -22,6 +22,9 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #ifndef CSD1130_GAME_STATE_PLAY_H_
 #define CSD1130_GAME_STATE_PLAY_H_
 
+#include <unordered_map>
+#include <Client.h>
+
 // ---------------------------------------------------------------------------
 
 void GameStateAsteroidsLoad(void);
@@ -32,6 +35,7 @@ void GameStateAsteroidsFree(void);
 void GameStateAsteroidsUnload(void);
 static AEVec2 finalPosition;
 AEVec2 returnPosition();
+void syncPlayers(std::unordered_map<int, playerData>& pData);
 // ---------------------------------------------------------------------------
 
 #endif // CSD1130_GAME_STATE_PLAY_H_

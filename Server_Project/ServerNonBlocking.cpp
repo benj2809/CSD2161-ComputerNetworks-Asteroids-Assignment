@@ -1,4 +1,4 @@
-/* Start Header
+﻿/* Start Header
 *****************************************************************/
 /*!
 \file server.cpp
@@ -28,6 +28,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include <mutex>
 #include <vector>
 #include "taskqueue.h"
+#include "playerdata.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -95,6 +96,11 @@ private:
     void sendUserList(SOCKET clientSocket);
     // Handle server disconnection
     void onDisconnect();
+    // For Assignment 4:
+    // Sends position to all connected clients
+    void sendPlayerData(SOCKET);
+    // Remove inactive players
+    void removeInactivePlayers();
     // Clean up resources
     void cleanup();
 };
@@ -158,6 +164,8 @@ void Server::run() {
         int bytesReceived = recvfrom(listenerSocket, buffer, sizeof(buffer), 0,
             (sockaddr*)&clientAddr, &clientAddrSize);
 
+        // removeInactivePlayers();
+
         if (bytesReceived == SOCKET_ERROR) {
             //std::cerr << "Receive failed." << std::endl;
             continue;
@@ -171,6 +179,8 @@ void Server::run() {
 
         // Add the client data to the task queue for processing by worker threads
         tq.produce(clientData);
+
+        sendPlayerData(listenerSocket);
     }
 }
 
@@ -258,6 +268,7 @@ bool Server::startListening() {
 }
 
 // Handle a connected client
+// DELETE
 void Server::handleClient(SOCKET clientSocket) {
     sockaddr_in clientAddr{};
     int addrSize = sizeof(clientAddr);
@@ -315,6 +326,7 @@ void Server::handleUdpClient(UdpClientData message)
     const char* messageData = message.data; // Message content
     sockaddr_in clientAddr = message.clientAddr; // Client address
 
+
     // Null-terminate the message if it's not already null-terminated
     message.data[message.dataSize] = '\0';  // Ensure null-termination at the end
 
@@ -324,31 +336,100 @@ void Server::handleUdpClient(UdpClientData message)
     int clientPort = ntohs(clientAddr.sin_port);
 
     // Print the message along with client IP and port
-    std::cout << "Received message from client (" << clientIp << ":" << clientPort << "): "
-        << messageData << std::endl;
+    // std::cout << "Received message from client (" << clientIp << ":" << clientPort << "): " << messageData << std::endl;
 
     // Create the message to send back, prepending "Message from server: "
-    std::string serverMessage = "This is a Message from server:" + std::string(messageData);
+    // std::string serverMessage = "This is a Message from server:" + std::string(messageData);
 
-    // Send the message back to the client (echoing it with the prefix)
-    int sendResult = sendto(listenerSocket, serverMessage.c_str(), serverMessage.length(), 0,
-        reinterpret_cast<sockaddr*>(&clientAddr), sizeof(clientAddr));
-
-    if (sendResult == SOCKET_ERROR) {
+    //// Send the message back to the client (echoing it with the prefix)
+    //int sendResult = sendto(listenerSocket, serverMessage.c_str(), serverMessage.length(), 0,
+    //    reinterpret_cast<sockaddr*>(&clientAddr), sizeof(clientAddr));
+    
+    /*if (sendResult == SOCKET_ERROR) {
         std::cerr << "Failed to send message to client." << std::endl;
     }
     else {
         std::cout << "Echoed message to client: " << serverMessage << std::endl;
-    }
+    }*/
 
     // Free up the thread (the thread will exit when the task completes)
+
+    // For game
+    float x, y;
+    std::string clientIPstr(clientIp);
+
+    std::string clientKey = clientIPstr + ":" +
+                            std::to_string(clientPort);
+
+    // Parse received position data
+    if (sscanf_s(messageData, "%f %f", &x, &y) != 2) {
+        std::cerr << "Position received invalid: " << messageData << std::endl;
+        return;
+    }
+    
+    playerData p;
+
+    // Check if player already exists
+    auto it = players.find(clientKey);
+    if (it != players.end()) {
+        // Player exists, update position
+        it->second.x = x;
+        it->second.y = y;
+    } 
+    else {
+        // New player, assign ID
+        static int nextPlayerID = 1;
+        int newPlayerID = nextPlayerID++;
+
+        playerData p;
+        p.playerID = std::to_string(newPlayerID);
+        p.x = x;
+        p.y = y;
+        p.cAddr = clientAddr;
+        p.cIP = clientIp;
+
+        players[clientKey] = p;
+
+        sendto(listenerSocket, p.playerID.c_str(), p.playerID.size(), 0, (sockaddr*)&p.cAddr, sizeof(p));
+    }
+
 }
 
+// Send all players position to each client
+void Server::sendPlayerData(SOCKET servSocket) {
+    std::string data; // = std::to_string(players.size()) + " ";
+    
+    // [X pos] [Y pos] [IP]
+    for (const auto& [pID, player] : players) {
+        data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + player.cIP + "\n";
+    }
 
+    // Send this data to all clients
+    for (const auto& [_, player] : players) {
+        // Convert `otherKey` back to sockaddr_in (You'll need to store these properly)
+        sendto(servSocket, data.c_str(), data.size(), 0, (sockaddr*)&player.cAddr, sizeof(player));
+    }
+}
 
+// Unused for now - Function here will remove inactive players based on how the server has no received a message from a client
+//                  Since UDP is connectionless, it will track based on client IP address.
+void Server::removeInactivePlayers() {
+    auto now = std::chrono::steady_clock::now();
+    const std::chrono::seconds timeout(5); // 5 seconds timeout
 
+    for (auto it = players.begin(); it != players.end();) {
+        if (now - it->second.lastActive > timeout) {
+            std::cout << "Removing inactive player ID: " << it->first << std::endl;
+            it = players.erase(it); // Remove player and update iterator
+        }
+        else {
+            ++it;
+        }
+    }
+}
 
 // Forward an echo message to another client
+// DELETE
 void Server::forwardEchoMessage(char* buffer, int length, const std::string& senderKey) {
     uint32_t destIPAddress;
     uint16_t destPort;
@@ -397,6 +478,7 @@ void Server::forwardEchoMessage(char* buffer, int length, const std::string& sen
 }
 
 // Send the list of connected users to a client
+// Delete
 void Server::sendUserList(SOCKET clientSocket) {
     std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
 

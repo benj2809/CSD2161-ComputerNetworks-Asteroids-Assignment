@@ -58,6 +58,8 @@ const float         BOUNDING_RECT_SIZE      = 1.0f;         // this is the norma
 
 static bool onValueChange{ true };
 
+int playerCount = 1;
+
 // -----------------------------------------------------------------------------
 enum TYPE
 {
@@ -144,6 +146,7 @@ void				gameObjInstDestroy(GameObjInst * pInst);
 
 void				Helper_Wall_Collision();
 
+std::unordered_map<int, GameObjInst*> pShips; // Player ships
 
 /******************************************************************************/
 /*!
@@ -261,36 +264,36 @@ void GameStateAsteroidsInit(void)
 	AE_ASSERT(spShip);
 	AEVec2 pos{}, vel{};
 
-	//Asteroid 1
-	pos.x = 90.0f;		pos.y = -220.0f;
-	vel.x = -60.0f;		vel.y = -30.0f;
-	AEVec2Set(&scale, ASTEROID_MIN_SCALE_X, ASTEROID_MAX_SCALE_Y);
-	gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+	////Asteroid 1
+	//pos.x = 90.0f;		pos.y = -220.0f;
+	//vel.x = -60.0f;		vel.y = -30.0f;
+	//AEVec2Set(&scale, ASTEROID_MIN_SCALE_X, ASTEROID_MAX_SCALE_Y);
+	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-	//Asteroid 2
-	pos.x = -260.0f;	pos.y = -250.0f;
-	vel.x = 39.0f;		vel.y = -130.0f;
-	AEVec2Set(&scale, ASTEROID_MAX_SCALE_X, ASTEROID_MIN_SCALE_Y);
-	gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+	////Asteroid 2
+	//pos.x = -260.0f;	pos.y = -250.0f;
+	//vel.x = 39.0f;		vel.y = -130.0f;
+	//AEVec2Set(&scale, ASTEROID_MAX_SCALE_X, ASTEROID_MIN_SCALE_Y);
+	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-	//Asteroid 3
-	pos.x = -200.0f;	pos.y = -150.0f;
-	vel.x = 40.0f;		vel.y = -200.0f;
-	AEVec2Set(&scale, ASTEROID_MAX_SCALE_X / 2.f, ASTEROID_MIN_SCALE_Y / 2.f);
-	gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+	////Asteroid 3
+	//pos.x = -200.0f;	pos.y = -150.0f;
+	//vel.x = 40.0f;		vel.y = -200.0f;
+	//AEVec2Set(&scale, ASTEROID_MAX_SCALE_X / 2.f, ASTEROID_MIN_SCALE_Y / 2.f);
+	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-	//Asteroid 4
-	pos.x = 300.0f;		pos.y = -115.0f;
-	vel.x = -25.0f;		vel.y = -100.0f;
-	AEVec2Set(&scale, ASTEROID_MIN_SCALE_X / 2.f, ASTEROID_MAX_SCALE_Y / 2.f);
-	gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+	////Asteroid 4
+	//pos.x = 300.0f;		pos.y = -115.0f;
+	//vel.x = -25.0f;		vel.y = -100.0f;
+	//AEVec2Set(&scale, ASTEROID_MIN_SCALE_X / 2.f, ASTEROID_MAX_SCALE_Y / 2.f);
+	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-	// create the static wall
-	AEVec2Set(&scale, WALL_SCALE_X, WALL_SCALE_Y);
-	AEVec2 position{};
-	AEVec2Set(&position, 300.0f, 150.0f);
-	spWall = gameObjInstCreate(TYPE_WALL, &scale, &position, nullptr, 0.0f);
-	AE_ASSERT(spWall);
+	//// create the static wall
+	//AEVec2Set(&scale, WALL_SCALE_X, WALL_SCALE_Y);
+	//AEVec2 position{};
+	//AEVec2Set(&position, 300.0f, 150.0f);
+	//spWall = gameObjInstCreate(TYPE_WALL, &scale, &position, nullptr, 0.0f);
+	//AE_ASSERT(spWall);
 
 	// reset the score and the number of ships
 	sScore      = 0;
@@ -324,6 +327,22 @@ void GameStateAsteroidsUpdate(void)
 	// v1 = a*t + v0		//This is done when the UP or DOWN key is pressed 
 	// Pos1 = v1*t + Pos0
 	
+	//playerCount = Client::getPlayerCount();
+
+	// Debug
+
+
+	//for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) {
+	//	GameObjInst* pInst = sGameObjInstList + i;
+	//	// skip non-active object
+	//	if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip...
+	//		continue;
+
+	//	if (pInst) {
+	//		std::cout << pInst->pObject->type << std::endl;
+	//	}
+	//}
+
 	if (!(sScore >= 5000)) {
 		if (!(sShipLives < 0)) {
 			if (AEInputCheckCurr(AEVK_UP)) // Moving forward
@@ -418,7 +437,7 @@ void GameStateAsteroidsUpdate(void)
 	// check for dynamic-static collisions (one case only: Ship vs Wall)
 	// [DO NOT UPDATE THIS PARAGRAPH'S CODE]
 	// ======================================================================
-	Helper_Wall_Collision(); // More information can be found below, at the definition of the function. TLDR; calls function CollisionIntersection_RectRect, definition found in Collision.cpp.
+	// Helper_Wall_Collision(); // More information can be found below, at the definition of the function. TLDR; calls function CollisionIntersection_RectRect, definition found in Collision.cpp.
 
 	//======================================================================
 	//check for dynamic-dynamic collisions [AA-BB] 
@@ -547,6 +566,8 @@ void GameStateAsteroidsUpdate(void)
 		AEMtx33Concat(&pInst->transform, &rot, &scale);
 		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
 	}
+
+	syncPlayers(players);
 }
 
 /******************************************************************************/
@@ -583,6 +604,17 @@ void GameStateAsteroidsDraw(void)
 		// Draw the shape used by the current object instance using "AEGfxMeshDraw".
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 	}
+
+	//for (std::pair<const int, GameObjInst*>& pair : pShips)
+	//{
+	//	GameObjInst* ship = pair.second; // Get ship instance
+
+	//	if (ship && (ship->flag & FLAG_ACTIVE))
+	//	{
+	//		AEGfxSetTransform(ship->transform.m);
+	//		AEGfxMeshDraw(ship->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+	//	}
+	//}
 
 	// Displaying ship lives and score values to user should there be an update to either values.
 	if(onValueChange)
@@ -754,5 +786,29 @@ void Helper_Wall_Collision()
 			spShip->velCurr.x = 0.0f;
 			spShip->velCurr.y = 0.0f;
 		}
+	}
+}
+
+// Sync players
+void syncPlayers(std::unordered_map<int, playerData>& pData) {
+	for (const auto& pair : pData) {
+		// If player does not have a ship, create one
+		if (pShips.find(pair.first) == pShips.end()) {
+			AEVec2 scale;
+			AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
+			AEVec2 position;
+			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
+			pShips[pair.first] = gameObjInstCreate(TYPE_SHIP, &scale, &position, nullptr, 0.0f);
+		}
+		else {
+			// Update existing ship position
+
+			AEVec2 position;
+			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
+			pShips[pair.first]->posCurr = position;
+			//std::cout << pShips[pair.first]->posCurr.x << " " << pShips[pair.first]->posCurr.y << std::endl;		
+
+		}
+		std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
 	}
 }
