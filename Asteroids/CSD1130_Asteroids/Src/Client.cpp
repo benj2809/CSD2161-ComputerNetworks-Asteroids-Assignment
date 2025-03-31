@@ -275,11 +275,11 @@ void Client::handleNetwork() {
         //processReceivedData(recvQueue
 
         // Debug
-        /*for (const auto& pair : players) {
+        for (const auto& pair : players) {
             int id = pair.first;
             playerData player = pair.second;
             std::cout << "Player " << id << ": (" << player.x << ", " << player.y << ")\n";
-        }*/
+        }
     }
 }
 

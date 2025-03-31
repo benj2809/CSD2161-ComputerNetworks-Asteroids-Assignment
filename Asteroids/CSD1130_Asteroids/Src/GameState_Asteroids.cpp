@@ -567,7 +567,7 @@ void GameStateAsteroidsUpdate(void)
 		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
 	}
 
-	syncPlayers(players);
+	// syncPlayers(players);
 }
 
 /******************************************************************************/

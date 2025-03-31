@@ -16,4 +16,5 @@ C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment
 C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,1): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
 C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,1): message : '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
   Generating Code...
+  LINK : C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\\Bin\CSD1130_AsteroidsD.exe not found or not built by the last incremental link; performing full link
   CSD1130_Asteroids.vcxproj -> C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
