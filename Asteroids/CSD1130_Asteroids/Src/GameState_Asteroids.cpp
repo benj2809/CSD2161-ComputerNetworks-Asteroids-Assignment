@@ -800,9 +800,9 @@ void Helper_Wall_Collision()
 // Sync players
 void syncPlayers(std::unordered_map<int, playerData>& pData) {
 	for (const auto& pair : pData) {
-		if (pair.second.playerID == Client::getPlayerID()) {
+		/*if (pair.second.playerID == Client::getPlayerID()) {
 			continue;
-		}
+		}*/
 		// If player does not have a ship, create one
 		if (pShips.find(pair.first) == pShips.end()) {
 			AEVec2 scale;

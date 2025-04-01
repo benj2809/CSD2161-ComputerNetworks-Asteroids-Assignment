@@ -245,11 +245,11 @@ void Client::handleNetwork() {
         // [Number of players] [Player ID] [Player X position] [Player Y position [Player IP]
         std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
 
-        //if (receivedBytes > 0 && playerID == -1) { // Only set once
-        //    playerID = std::stoi(recvBuffer); // Convert received ID to integer
-        //    std::cout << "Received My Player ID: " << playerID << std::endl;
-        //    return;
-        //}
+        if (receivedBytes > 0 && playerID == -1) { // Only set once
+            playerID = std::stoi(recvBuffer); // Convert received ID to integer
+            //std::cout << "Received My Player ID: " << playerID << std::endl;
+            return;
+        }
 
         //std::cout << "Received message from server: " << pData << std::endl;
 
