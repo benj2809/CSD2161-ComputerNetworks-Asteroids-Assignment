@@ -512,11 +512,10 @@ void GameStateAsteroidsUpdate(void)
 		{
 			// Wrap the ship from one end of the screen to the other
 			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - SHIP_SCALE_X,	// Wrapping the x-coordinates of the ship to the opposite end of the screen, should it go out of bounds.
-														AEGfxGetWinMaxX() + SHIP_SCALE_X);
+				AEGfxGetWinMaxX() + SHIP_SCALE_X);
 			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - SHIP_SCALE_Y,   // Likewise, wrapping the y-coordinates of the ship to the opposite end of the screen, should it go out of bounds.
-														AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+				AEGfxGetWinMaxY() + SHIP_SCALE_Y);
 			//update ship position
-			finalPosition = { pInst->posCurr.x, pInst->posCurr.y };
 		}
 
 		// Wrap asteroids here
@@ -567,7 +566,16 @@ void GameStateAsteroidsUpdate(void)
 		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
 	}
 
-	// syncPlayers(players);
+	for (const auto& pair : players) {
+
+		if (pair.second.playerID != Client::getPlayerID()) {
+			continue;
+		}
+		finalPosition = { spShip->posCurr.x, spShip->posCurr.y };
+		break;
+	}
+
+	syncPlayers(players);
 }
 
 /******************************************************************************/
@@ -792,6 +800,9 @@ void Helper_Wall_Collision()
 // Sync players
 void syncPlayers(std::unordered_map<int, playerData>& pData) {
 	for (const auto& pair : pData) {
+		if (pair.second.playerID == Client::getPlayerID()) {
+			continue;
+		}
 		// If player does not have a ship, create one
 		if (pShips.find(pair.first) == pShips.end()) {
 			AEVec2 scale;
@@ -809,6 +820,6 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 			//std::cout << pShips[pair.first]->posCurr.x << " " << pShips[pair.first]->posCurr.y << std::endl;		
 
 		}
-		std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
+		//std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
 	}
 }
