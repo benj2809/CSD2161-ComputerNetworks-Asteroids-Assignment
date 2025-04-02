@@ -273,84 +273,80 @@ void Client::handleNetwork() {
             continue;
         }
 
-        // Check if this is asteroid data (format: "A|id,x,y,vx,vy,sx,sy,active;")
+        // Check if this is asteroid data (format: "ASTEROIDS|id1,x1,y1,velX1,velY1,scaleX1,scaleY1,active1|id2,...")
         if (receivedData.find("ASTEROIDS") == 0) {
             std::lock_guard<std::mutex> lock(asteroidsMutex);
 
             // Clear existing asteroids
             asteroids.clear();
 
-            // Skip the "A|" prefix
-            size_t pos = 2;
-            while (pos < receivedData.length()) {
-                size_t endPos = receivedData.find(';', pos);
-                if (endPos == std::string::npos) break;
+            // Skip the "ASTEROIDS" prefix
+            size_t pos = receivedData.find('|');
+            if (pos != std::string::npos) {
+                while (pos < receivedData.length()) {
+                    size_t nextPos = receivedData.find('|', pos + 1);
+                    if (nextPos == std::string::npos) {
+                        nextPos = receivedData.length();
+                    }
 
-                std::string asteroidStr = receivedData.substr(pos, endPos - pos);
-                pos = endPos + 1;
+                    // Extract the asteroid data segment
+                    std::string segment = receivedData.substr(pos + 1, nextPos - pos - 1);
 
-                // Parse the asteroid data
-                size_t commaPos = asteroidStr.find(',');
-                if (commaPos == std::string::npos) continue;
+                    // Skip empty segments
+                    if (!segment.empty()) {
+                        // Parse the asteroid segment
+                        std::istringstream iss(segment);
+                        std::string id, value;
 
-                std::string id = asteroidStr.substr(0, commaPos);
-                std::string restData = asteroidStr.substr(commaPos + 1);
+                        // Get the asteroid ID
+                        if (std::getline(iss, id, ',')) {
+                            asteroidData asteroid;
 
-                // Create asteroid struct
-                asteroidData asteroid;
+                            // Parse x
+                            if (std::getline(iss, value, ',')) asteroid.x = (float)atof(value.c_str());
 
-                // Parse position, velocity, scale, and active state
-                std::istringstream ss(restData);
-                std::string token;
+                            // Parse y
+                            if (std::getline(iss, value, ',')) asteroid.y = (float)atof(value.c_str());
 
-                // Parse x
-                if (std::getline(ss, token, ',')) asteroid.x = (float)atof(token.c_str());
+                            // Parse velX
+                            if (std::getline(iss, value, ',')) asteroid.velX = (float)atof(value.c_str());
 
-                // Parse y
-                if (std::getline(ss, token, ',')) asteroid.y = (float)atof(token.c_str());
+                            // Parse velY
+                            if (std::getline(iss, value, ',')) asteroid.velY = (float)atof(value.c_str());
 
-                // Parse velX
-                if (std::getline(ss, token, ',')) asteroid.velX = (float)atof(token.c_str());
+                            // Parse scaleX
+                            if (std::getline(iss, value, ',')) asteroid.scaleX = (float)atof(value.c_str());
 
-                // Parse velY
-                if (std::getline(ss, token, ',')) asteroid.velY = (float)atof(token.c_str());
+                            // Parse scaleY
+                            if (std::getline(iss, value, ',')) asteroid.scaleY = (float)atof(value.c_str());
 
-                // Parse scaleX
-                if (std::getline(ss, token, ',')) asteroid.scaleX = (float)atof(token.c_str());
+                            // Parse active
+                            if (std::getline(iss, value)) asteroid.active = (value == "1");
 
-                // Parse scaleY
-                if (std::getline(ss, token, ',')) asteroid.scaleY = (float)atof(token.c_str());
+                            // Add to map
+                            asteroids[id] = asteroid;
+                        }
+                    }
 
-                // Parse active
-                if (std::getline(ss, token, ',')) asteroid.active = (token == "1");
-
-                // Add to map
-                asteroids[id] = asteroid;
+                    pos = nextPos;
+                }
             }
+
+            // Debug output
+            std::cout << "Parsed " << asteroids.size() << " asteroids from server data" << std::endl;
 
             continue;
         }
 
-        // Check if this is asteroid destruction notification
-        if (receivedData.find("D|") == 0) {
-            std::string asteroidID = receivedData.substr(2);
+        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
+        std::istringstream str(pData);
 
-            // Remove the asteroid from the map
-            std::lock_guard<std::mutex> lock(asteroidsMutex);
-            asteroids.erase(asteroidID);
+        playerData p;
 
-            continue;
+        // Updated parsing to include score
+        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
+            players[p.playerID] = p;  // Store new player data
         }
-
-            std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
-            std::istringstream str(pData);
-
-            playerData p;
-
-            // Updated parsing to include score
-            while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
-                players[p.playerID] = p;  // Store new player data
-            }
 
         pCount = players.size();
     }

@@ -21,7 +21,7 @@ Copyright (C) 20xx DigiPen Institute of Technology.
 Reproduction or disclosure of this file or its contents without the
 prior written consent of DigiPen Institute of Technology is prohibited.
  */
-/******************************************************************************/
+ /******************************************************************************/
 
 #include "main.h"
 #include <iostream>
@@ -31,30 +31,30 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 	Defines
 */
 /******************************************************************************/
-const unsigned int	GAME_OBJ_NUM_MAX		= 32;			// The total number of different objects (Shapes)
-const unsigned int	GAME_OBJ_INST_NUM_MAX	= 2048;			// The total number of different game object instances
+const unsigned int	GAME_OBJ_NUM_MAX = 32;			// The total number of different objects (Shapes)
+const unsigned int	GAME_OBJ_INST_NUM_MAX = 2048;			// The total number of different game object instances
 
 
-const unsigned int	SHIP_INITIAL_NUM		= 3;			// initial number of ship lives
-const float			SHIP_SCALE_X			= 16.0f;		// ship scale x
-const float			SHIP_SCALE_Y			= 16.0f;		// ship scale y
-const float			BULLET_SCALE_X			= 20.0f;		// bullet scale x
-const float			BULLET_SCALE_Y			= 3.0f;			// bullet scale y
-const float			ASTEROID_MIN_SCALE_X	= 10.0f;		// asteroid minimum scale x
-const float			ASTEROID_MAX_SCALE_X	= 60.0f;		// asteroid maximum scale x
-const float			ASTEROID_MIN_SCALE_Y	= 10.0f;		// asteroid minimum scale y
-const float			ASTEROID_MAX_SCALE_Y	= 60.0f;		// asteroid maximum scale y
+const unsigned int	SHIP_INITIAL_NUM = 3;			// initial number of ship lives
+const float			SHIP_SCALE_X = 16.0f;		// ship scale x
+const float			SHIP_SCALE_Y = 16.0f;		// ship scale y
+const float			BULLET_SCALE_X = 20.0f;		// bullet scale x
+const float			BULLET_SCALE_Y = 3.0f;			// bullet scale y
+const float			ASTEROID_MIN_SCALE_X = 10.0f;		// asteroid minimum scale x
+const float			ASTEROID_MAX_SCALE_X = 60.0f;		// asteroid maximum scale x
+const float			ASTEROID_MIN_SCALE_Y = 10.0f;		// asteroid minimum scale y
+const float			ASTEROID_MAX_SCALE_Y = 60.0f;		// asteroid maximum scale y
 
-const float			WALL_SCALE_X			= 64.0f;		// wall scale x
-const float			WALL_SCALE_Y			= 164.0f;		// wall scale y
+const float			WALL_SCALE_X = 64.0f;		// wall scale x
+const float			WALL_SCALE_Y = 164.0f;		// wall scale y
 
-const float			SHIP_ACCEL_FORWARD		= 100.0f;		// ship forward acceleration (in m/s^2)
-const float			SHIP_ACCEL_BACKWARD		= 100.0f;		// ship backward acceleration (in m/s^2)
-const float			SHIP_ROT_SPEED			= (2.0f * PI);	// ship rotation speed (degree/second)
+const float			SHIP_ACCEL_FORWARD = 100.0f;		// ship forward acceleration (in m/s^2)
+const float			SHIP_ACCEL_BACKWARD = 100.0f;		// ship backward acceleration (in m/s^2)
+const float			SHIP_ROT_SPEED = (2.0f * PI);	// ship rotation speed (degree/second)
 
-const float			BULLET_SPEED			= 400.0f;		// bullet speed (m/s)
+const float			BULLET_SPEED = 400.0f;		// bullet speed (m/s)
 
-const float         BOUNDING_RECT_SIZE      = 1.0f;         // this is the normalized bounding rectangle (width and height) sizes - AABB collision data
+const float         BOUNDING_RECT_SIZE = 1.0f;         // this is the normalized bounding rectangle (width and height) sizes - AABB collision data
 
 static bool onValueChange{ true };
 float playerData::gameTimer = 60.0f;
@@ -67,7 +67,7 @@ int playerCount = 1;
 enum TYPE
 {
 	// list of game object types
-	TYPE_SHIP = 0, 
+	TYPE_SHIP = 0,
 	TYPE_BULLET,
 	TYPE_ASTEROID,
 	TYPE_WALL,
@@ -78,7 +78,7 @@ enum TYPE
 // -----------------------------------------------------------------------------
 // object flag definition
 
-const unsigned long FLAG_ACTIVE				= 0x00000001;
+const unsigned long FLAG_ACTIVE = 0x00000001;
 
 /******************************************************************************/
 /*!
@@ -90,7 +90,7 @@ const unsigned long FLAG_ACTIVE				= 0x00000001;
 struct GameObj
 {
 	unsigned long		type;		// object type
-	AEGfxVertexList *	pMesh;		// This will hold the triangles which will form the shape of the object
+	AEGfxVertexList* pMesh;		// This will hold the triangles which will form the shape of the object
 };
 
 // ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ struct GameObj
 //Game object instance structure
 struct GameObjInst
 {
-	GameObj *			pObject;	// pointer to the 'original' shape
+	GameObj* pObject;	// pointer to the 'original' shape
 	unsigned long		flag;		// bit flag or-ed together
 	AEVec2				scale;		// scaling value of the object instance
 	AEVec2				posCurr;	// object current position
@@ -110,7 +110,7 @@ struct GameObjInst
 	float				dirCurr;	// object current direction
 	AABB				boundingBox;// object bouding box that encapsulates the object
 	AEMtx33				transform;	// object transformation matrix: Each frame, 
-									// calculate the object instance's transformation matrix and save it here
+	// calculate the object instance's transformation matrix and save it here
 
 };
 
@@ -129,10 +129,10 @@ static GameObjInst			sGameObjInstList[GAME_OBJ_INST_NUM_MAX];	// Each element in
 static unsigned long		sGameObjInstNum;							// The number of used game object instances
 
 // pointer to the ship object
-static GameObjInst *		spShip;										// Pointer to the "Ship" game object instance
+static GameObjInst* spShip;										// Pointer to the "Ship" game object instance
 
 // pointer to the wall object
-static GameObjInst *		spWall;										// Pointer to the "Wall" game object instance
+static GameObjInst* spWall;										// Pointer to the "Wall" game object instance
 
 // number of ship available (lives 0 = game over)
 static long					sShipLives;									// The number of lives left
@@ -143,9 +143,9 @@ static unsigned long		sScore;										// Current score
 // ---------------------------------------------------------------------------
 
 // functions to create/destroy a game object instance
-GameObjInst *		gameObjInstCreate (unsigned long type, AEVec2* scale,
-											   AEVec2 * pPos, AEVec2 * pVel, float dir);
-void				gameObjInstDestroy(GameObjInst * pInst);
+GameObjInst* gameObjInstCreate(unsigned long type, AEVec2* scale,
+	AEVec2* pPos, AEVec2* pVel, float dir);
+void				gameObjInstDestroy(GameObjInst* pInst);
 
 void				Helper_Wall_Collision();
 
@@ -261,7 +261,7 @@ void GameStateAsteroidsLoad(void)
 
 /******************************************************************************/
 /*!
-	"Initialize" function of this state 
+	"Initialize" function of this state
 */
 /******************************************************************************/
 void GameStateAsteroidsInit(void)
@@ -305,8 +305,8 @@ void GameStateAsteroidsInit(void)
 	//AE_ASSERT(spWall);
 
 	// reset the score and the number of ships
-	sScore      = 0;
-	sShipLives  = SHIP_INITIAL_NUM;
+	sScore = 0;
+	sShipLives = SHIP_INITIAL_NUM;
 }
 
 /******************************************************************************/
@@ -373,7 +373,7 @@ void GameStateAsteroidsUpdate(void)
 	//
 	// v1 = a*t + v0		//This is done when the UP or DOWN key is pressed 
 	// Pos1 = v1*t + Pos0
-	
+
 	//playerCount = Client::getPlayerCount();
 
 	// Debug
@@ -481,7 +481,7 @@ void GameStateAsteroidsUpdate(void)
 
 			// Shoot a bullet if space is triggered (Create a new object instance)
 			if (AEInputCheckTriggered(AEVK_SPACE)) // Creating a bullet when space is triggered.
-			{ 
+			{
 				AEVec2 scale{}, pos{}, vel{};
 				AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y); // Vector for scaling the bullet
 				AEVec2Set(&pos, spShip->posCurr.x, spShip->posCurr.y); // Vector for the position of where the bullet is created - In this case it is created at the ship's location.
@@ -490,7 +490,7 @@ void GameStateAsteroidsUpdate(void)
 			}
 		}
 	}
-	
+
 	// ======================================================================
 	// Save previous positions
 	//  -- For all instances
@@ -527,7 +527,7 @@ void GameStateAsteroidsUpdate(void)
 		pInst->posCurr.x += pInst->velCurr.x * (float)AEFrameRateControllerGetFrameTime(); // Updating position of the object instance.
 		pInst->posCurr.y += pInst->velCurr.y * (float)AEFrameRateControllerGetFrameTime();
 	}
-	
+
 	// ======================================================================
 	// check for dynamic-static collisions (one case only: Ship vs Wall)
 	// [DO NOT UPDATE THIS PARAGRAPH'S CODE]
@@ -540,7 +540,7 @@ void GameStateAsteroidsUpdate(void)
 	if (!(sScore >= 5000)) { // Just like movement, collision only takes place when the game is active.
 		if (!(sShipLives < 0)) {
 			for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) { // For loop 1: This will iterate for each game object instance.
- 				GameObjInst* pInst = sGameObjInstList + i; // To access each game object instance...
+				GameObjInst* pInst = sGameObjInstList + i; // To access each game object instance...
 				if ((pInst->flag & FLAG_ACTIVE) == 0) continue; // If the instance is not active (indicated by pInst->flag, which is 1 when the instance is active), continue to the next iteration.
 				if (pInst->pObject->type == TYPE_ASTEROID) { // Checking if the current instance is of type ASTEROID, which is the instance we are checking for collision for.
 					for (int j = 0; j < GAME_OBJ_INST_NUM_MAX; ++j) { // For loop 2: To iterate through all the other instances to check for collision with the ASTEROID.
@@ -552,8 +552,8 @@ void GameStateAsteroidsUpdate(void)
 
 						if (NewpInst->pObject->type == TYPE_SHIP) { // If the current instance is the ship, check for collision.
 							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
-															   spShip->boundingBox, spShip->velCurr,
-															   tFirst)) { // This if condition checks between the min & max for the SHIP x/y coordinates against the ASTEROID																																																										// It is important to check for both ASTEROID - SHIP and SHIP - ASTEROID collisions, this confirms there is a collision b/w both objects																																																						// If either one of the checks is to be omitted, the will be a case where no collision is detected when either object is WITHIN the other.
+								spShip->boundingBox, spShip->velCurr,
+								tFirst)) { // This if condition checks between the min & max for the SHIP x/y coordinates against the ASTEROID																																																										// It is important to check for both ASTEROID - SHIP and SHIP - ASTEROID collisions, this confirms there is a collision b/w both objects																																																						// If either one of the checks is to be omitted, the will be a case where no collision is detected when either object is WITHIN the other.
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision																																									
 								gameObjInstDestroy(spShip); // Likewise destroy the ship
 								AEVec2 scale{ SHIP_SCALE_X, SHIP_SCALE_Y }; // The following vectors are the initial vectors for the ship.
@@ -566,11 +566,11 @@ void GameStateAsteroidsUpdate(void)
 						}
 						else if (NewpInst->pObject->type == TYPE_BULLET) { // If the current instance is a bullet, eheck for collision.
 							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
-															   NewpInst->boundingBox, NewpInst->velCurr,
-															   tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
+								NewpInst->boundingBox, NewpInst->velCurr,
+								tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
 
 								// Removing pointer of destroyed bullet from pBullets container.
-								pBullets.erase(std::remove_if(pBullets.begin(), pBullets.end(), 
+								pBullets.erase(std::remove_if(pBullets.begin(), pBullets.end(),
 									[pInst](GameObjInst* bullet) {
 										return bullet = pInst;
 									}), pBullets.end());
@@ -603,12 +603,12 @@ void GameStateAsteroidsUpdate(void)
 	// ===================================================================
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
-		GameObjInst * pInst = sGameObjInstList + i;
+		GameObjInst* pInst = sGameObjInstList + i;
 
 		// skip non-active object
 		if ((pInst->flag & FLAG_ACTIVE) == 0)
 			continue;
-		
+
 		// check if the object is a ship
 		if (pInst->pObject->type == TYPE_SHIP) // Checking for ship.
 		{
@@ -621,18 +621,18 @@ void GameStateAsteroidsUpdate(void)
 		}
 
 		// Wrap asteroids here
-		
+
 		if (pInst->pObject->type == TYPE_ASTEROID) { // Checking for asteroid.
 			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - ASTEROID_MAX_SCALE_X,	// Wrapping the x-coordinate of the asteroid to the opposite end of the screen, should it go out of bounds.
-														AEGfxGetWinMaxX() + ASTEROID_MAX_SCALE_X);
+				AEGfxGetWinMaxX() + ASTEROID_MAX_SCALE_X);
 			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - ASTEROID_MAX_SCALE_Y,	// Likewise, wrapping the y-coordinates of the asteroid to the opposite end of the screen, should it go out of bounds.
-														AEGfxGetWinMaxY() + ASTEROID_MAX_SCALE_Y);
+				AEGfxGetWinMaxY() + ASTEROID_MAX_SCALE_Y);
 		}
 
 		// Remove bullets that go out of bounds
 		if (pInst->pObject->type == TYPE_BULLET) { // Checking for bullet.
 			if (pInst->posCurr.x > (AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.x < -(AEGfxGetWindowWidth() / 2.f)    // Checking if the bullets position falls out of bounds, in our case the bound anything within the screen width and height.
-			 || pInst->posCurr.y >(AEGfxGetWindowHeight() / 2.f) || pInst->posCurr.y < -(AEGfxGetWindowHeight() / 2.f))
+				|| pInst->posCurr.y >(AEGfxGetWindowHeight() / 2.f) || pInst->posCurr.y < -(AEGfxGetWindowHeight() / 2.f))
 				gameObjInstDestroy(pInst);																				 // Destroying the bullet should it go out of bounds.
 		}
 	}
@@ -691,7 +691,7 @@ void GameStateAsteroidsUpdate(void)
 void GameStateAsteroidsDraw(void)
 {
 	char strBuffer[1024]; // To store the score and ship lives to print the user whenever there is an update to either values.
-	
+
 	AEGfxSetRenderMode(AE_GFX_RM_COLOR); // Render mode.
 	AEGfxTextureSet(NULL, 0, 0); // No texture.
 
@@ -704,7 +704,7 @@ void GameStateAsteroidsDraw(void)
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
 		GameObjInst* pInst = sGameObjInstList + i; // Accessing each instance...
-		
+
 		// skip non-active object
 		if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip...
 			continue;
@@ -730,7 +730,7 @@ void GameStateAsteroidsDraw(void)
 	renderServerAsteroids();
 
 	// Displaying ship lives and score values to user should there be an update to either values.
-	if(onValueChange)
+	if (onValueChange)
 	{
 		//printf("%s \n", strBuffer);
 
@@ -788,7 +788,7 @@ void GameStateAsteroidsFree(void)
 void GameStateAsteroidsUnload(void)
 {
 	for (unsigned long i = 0; i < sGameObjNum; ++i) { // Iterating through all meshes - sGameObjNum contains the number meshes created.
-		GameObj * pObject = sGameObjList + i; 
+		GameObj* pObject = sGameObjList + i;
 		AEGfxMeshFree(pObject->pMesh); // Freeing the mesh.
 		pObject->pMesh = NULL; // Setting it to NULL after freeing.
 	}
@@ -820,32 +820,32 @@ float returnBulletRotation() {
 	Function to aid in creating an instance for a object. Essentially initializing the new instance with the appropriate values.
 */
 /******************************************************************************/
-GameObjInst * gameObjInstCreate(unsigned long type, 
-							   AEVec2 * scale,
-							   AEVec2 * pPos, 
-							   AEVec2 * pVel, 
-							   float dir)
+GameObjInst* gameObjInstCreate(unsigned long type,
+	AEVec2* scale,
+	AEVec2* pPos,
+	AEVec2* pVel,
+	float dir)
 {
 	AEVec2 zero;
 	AEVec2Zero(&zero); // Zero'd out vector to assign data members assigned to nullptr.
 
 	AE_ASSERT_PARM(type < sGameObjNum); // Error message if the type of instance to be created is not of the correct type.
-	
+
 	// loop through the object instance list to find a non-used object instance
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
-		GameObjInst * pInst = sGameObjInstList + i;
+		GameObjInst* pInst = sGameObjInstList + i;
 
 		// check if current instance is not used
 		if (pInst->flag == 0)
 		{
 			// it is not used => use it to create the new instance
-			pInst->pObject	= sGameObjList + type;
-			pInst->flag		= FLAG_ACTIVE;
-			pInst->scale	= *scale;
-			pInst->posCurr	= pPos ? *pPos : zero;
-			pInst->velCurr	= pVel ? *pVel : zero;
-			pInst->dirCurr	= dir;
+			pInst->pObject = sGameObjList + type;
+			pInst->flag = FLAG_ACTIVE;
+			pInst->scale = *scale;
+			pInst->posCurr = pPos ? *pPos : zero;
+			pInst->velCurr = pVel ? *pVel : zero;
+			pInst->dirCurr = dir;
 			// return the newly created instance
 			return pInst;
 		}
@@ -859,7 +859,7 @@ GameObjInst * gameObjInstCreate(unsigned long type,
 	Function to destroy the instance of the object, by simply setting its flag to be 0.
 */
 /******************************************************************************/
-void gameObjInstDestroy(GameObjInst * pInst)
+void gameObjInstDestroy(GameObjInst* pInst)
 {
 	// if instance is destroyed before, just return
 	if (pInst->flag == 0)
@@ -873,7 +873,7 @@ void gameObjInstDestroy(GameObjInst * pInst)
 
 /******************************************************************************/
 /*!
-    check for collision between Ship and Wall and apply physics response on the Ship
+	check for collision between Ship and Wall and apply physics response on the Ship
 		-- Apply collision response only on the "Ship" as we consider the "Wall" object is always stationary
 		-- We'll check collision only when the ship is moving towards the wall!
 	[DO NOT UPDATE THIS PARAGRAPH'S CODE]

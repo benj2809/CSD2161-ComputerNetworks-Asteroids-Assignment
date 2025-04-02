@@ -86,7 +86,7 @@ public:
 
     // Get player count
     static const int getPlayerCount() { return pCount; }
-    
+
     // Get player ID for this client
     static const int getPlayerID() { return playerID; }
 
@@ -146,7 +146,7 @@ private:
     void handleUserInput();
 
     /**
-    * 
+    *
     */
     void handleID();
 

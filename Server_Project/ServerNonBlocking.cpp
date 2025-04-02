@@ -302,13 +302,29 @@ void Server::createAsteroid() {
         y = (float)(rand() % 1200 - 600); // Range: -600 to 600
     }
 
-    // Create random velocity directed toward the center
-    float velX = (0.0f - x) * (float)(rand() % 50 + 50) / 1000.0f; // Range: 0.05 to 0.10 times distance
-    float velY = (0.0f - y) * (float)(rand() % 50 + 50) / 1000.0f; // Range: 0.05 to 0.10 times distance
+    // Create more controlled velocity directed toward the center
+    // Use a fixed speed range to avoid extremely fast asteroids
+    float speed = (float)(rand() % 30 + 30) / 1000.0f; // Range: 0.03 to 0.06
 
-    // Random scale
-    float scaleX = (float)(rand() % (int)(ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE + 1) + ASTEROID_MIN_SCALE);
-    float scaleY = (float)(rand() % (int)(ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE + 1) + ASTEROID_MIN_SCALE);
+    // Calculate direction vector to center (0,0)
+    float dirX = 0.0f - x;
+    float dirY = 0.0f - y;
+
+    // Normalize direction vector
+    float length = sqrt(dirX * dirX + dirY * dirY);
+    if (length > 0) {
+        dirX /= length;
+        dirY /= length;
+    }
+
+    // Apply speed to direction
+    float velX = dirX * speed;
+    float velY = dirY * speed;
+
+    // Random scale with more consistent sizing
+    float baseScale = (float)(rand() % (int)(ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE + 1) + ASTEROID_MIN_SCALE);
+    float scaleX = baseScale * (0.8f + (float)(rand() % 40) / 100.0f); // 80-120% of base scale
+    float scaleY = baseScale * (0.8f + (float)(rand() % 40) / 100.0f); // 80-120% of base scale
 
     // Create the asteroid
     asteroidData newAsteroid;
@@ -331,27 +347,50 @@ void Server::createAsteroid() {
         << " and scale (" << scaleX << ", " << scaleY << ")" << std::endl;
 }
 
+
 void Server::updateAsteroids() {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
 
     auto now = std::chrono::steady_clock::now();
     float deltaTime = std::chrono::duration<float>(now - lastAsteroidUpdate).count();
 
+    // Cap deltaTime to prevent huge jumps
+    if (deltaTime > 0.1f) {
+        deltaTime = 0.1f;
+    }
+
     // Update position of all asteroids
     for (auto& [id, asteroid] : asteroids) {
         if (!asteroid.active) continue;
 
-        // Update position
-        asteroid.x += asteroid.velX * deltaTime * 100.0f; // Scale by 100 for better visibility
-        asteroid.y += asteroid.velY * deltaTime * 100.0f;
+        // Update position with smoother velocity multiplier
+        // Using 60.0f instead of 100.0f for less jittery movement
+        asteroid.x += asteroid.velX * deltaTime * 60.0f;
+        asteroid.y += asteroid.velY * deltaTime * 60.0f;
 
         // Check if the asteroid is too far out of bounds (for cleanup)
         if (std::abs(asteroid.x) > 1200 || std::abs(asteroid.y) > 800) {
             // Instead of immediate deletion, mark for respawn
             asteroid.x = (float)(rand() % 1600 - 800);
             asteroid.y = 400.0f;
-            asteroid.velX = (float)(rand() % 100 - 50) / 300.0f;
-            asteroid.velY = (float)(rand() % 100 - 150) / 300.0f;
+
+            // Create more controlled velocity directed toward the center
+            float speed = (float)(rand() % 30 + 30) / 1000.0f; // Range: 0.03 to 0.06
+
+            // Calculate direction vector to center (0,0)
+            float dirX = 0.0f - asteroid.x;
+            float dirY = 0.0f - asteroid.y;
+
+            // Normalize direction vector
+            float length = sqrt(dirX * dirX + dirY * dirY);
+            if (length > 0) {
+                dirX /= length;
+                dirY /= length;
+            }
+
+            // Apply speed to direction
+            asteroid.velX = dirX * speed;
+            asteroid.velY = dirY * speed;
         }
     }
 
