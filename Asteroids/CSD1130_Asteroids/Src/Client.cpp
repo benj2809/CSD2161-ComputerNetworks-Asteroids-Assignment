@@ -28,7 +28,7 @@ bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
     if (!setupWinsock()) return false;
     if (!resolveAddress(serverIP, serverPort)) return false;
     if (!createSocket()) return false;
-   // if (!connectToServer()) return false;
+    // if (!connectToServer()) return false;
 
     return true;
 }
@@ -66,7 +66,7 @@ void Client::runScript(const std::string& scriptPath) {
     sendToServerUdp();
 }
 
-void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::string& port)
+void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port)
 {
     std::ifstream file(scriptPath);  // Open the file
 
@@ -85,7 +85,7 @@ void Client::sendToServerUdp() {
 
     ////get position of th ship.
     AEVec2 position = returnPlayerPosition();
-    
+
     // Direction ship is facing.
     float rot = returnPlayerRotation();
 
@@ -128,7 +128,7 @@ void Client::sendToServerUdp() {
     udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
 
     // Send message to the server using the pre-existing socket
-    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data   ), 0,
+    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
         reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr));
 
     if (sendResult == SOCKET_ERROR) {
@@ -342,15 +342,15 @@ void Client::handleNetwork() {
             continue;
         }
 
-        // Process player data (existing code)
-        std::istringstream str(receivedData);
+            std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
+            std::istringstream str(pData);
 
-        playerData p;
+            playerData p;
 
-        // Updated parsing to include score
-        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
-            players[p.playerID] = p;  // Store new player data
-        }
+            // Updated parsing to include score
+            while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
+                players[p.playerID] = p;  // Store new player data
+            }
 
         pCount = players.size();
     }
