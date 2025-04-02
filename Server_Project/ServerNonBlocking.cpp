@@ -325,8 +325,6 @@ void Server::handleUdpClient(UdpClientData message)
     // Unpack the message and client address from the incoming message
     const char* messageData = message.data; // Message content
     sockaddr_in clientAddr = message.clientAddr; // Client address
-
-
     // Null-terminate the message if it's not already null-terminated
     message.data[message.dataSize] = '\0';  // Ensure null-termination at the end
 
@@ -335,75 +333,53 @@ void Server::handleUdpClient(UdpClientData message)
     inet_ntop(AF_INET, &clientAddr.sin_addr, clientIp, sizeof(clientIp));
     int clientPort = ntohs(clientAddr.sin_port);
 
-    // Print the message along with client IP and port
-    // std::cout << "Received message from client (" << clientIp << ":" << clientPort << "): " << messageData << std::endl;
-
-    // Create the message to send back, prepending "Message from server: "
-    // std::string serverMessage = "This is a Message from server:" + std::string(messageData);
-
-    //// Send the message back to the client (echoing it with the prefix)
-    //int sendResult = sendto(listenerSocket, serverMessage.c_str(), serverMessage.length(), 0,
-    //    reinterpret_cast<sockaddr*>(&clientAddr), sizeof(clientAddr));
-    
-    /*if (sendResult == SOCKET_ERROR) {
-        std::cerr << "Failed to send message to client." << std::endl;
-    }
-    else {
-        std::cout << "Echoed message to client: " << serverMessage << std::endl;
-    }*/
-
-    // Free up the thread (the thread will exit when the task completes)
-
     // For game
     float x, y, rot;
+    int score; // Add variable for score
     std::string clientIPstr(clientIp);
-
     std::string clientKey = clientIPstr + ":" +
-                            std::to_string(clientPort);
+        std::to_string(clientPort);
 
-    // Parse received position data
-    if (sscanf_s(messageData, "%f %f %f", &x, &y, &rot) != 3) {
-        std::cerr << "Position received invalid: " << messageData << std::endl;
+    // Parse received position and score data - now looking for 4 values instead of 3
+    if (sscanf_s(messageData, "%f %f %f %d", &x, &y, &rot, &score) != 4) {
+        std::cerr << "Data received invalid: " << messageData << std::endl;
         return;
     }
-    
-    playerData p;
 
     // Check if player already exists
     auto it = players.find(clientKey);
     if (it != players.end()) {
-        // Player exists, update position
+        // Player exists, update position and score
         it->second.x = x;
         it->second.y = y;
         it->second.rot = rot;
-    } 
+        it->second.score = score; // Update the score
+    }
+
     else {
         // New player, assign ID
         static int nextPlayerID = 1;
         int newPlayerID = nextPlayerID++;
-
         playerData p;
         p.playerID = std::to_string(newPlayerID);
         p.x = x;
         p.y = y;
         p.rot = rot;
+        p.score = score; // Set initial score
         p.cAddr = clientAddr;
         p.cIP = clientIp;
-
         players[clientKey] = p;
-
         sendto(listenerSocket, p.playerID.c_str(), p.playerID.size(), 0, (sockaddr*)&p.cAddr, sizeof(p));
     }
-
 }
-
 // Send all players position to each client
 void Server::sendPlayerData(SOCKET servSocket) {
     std::string data; // = std::to_string(players.size()) + " ";
     
     // [Player ID] [X pos] [Y pos] [Rotation] [IP]
     for (const auto& [pID, player] : players) {
-        data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + std::to_string(player.rot) + " " + player.cIP + "\n";
+        data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + std::to_string(player.rot) + " " 
+            + std::to_string(player.score) + " " + player.cIP + "\n";
     }
 
     // Send this data to all clients

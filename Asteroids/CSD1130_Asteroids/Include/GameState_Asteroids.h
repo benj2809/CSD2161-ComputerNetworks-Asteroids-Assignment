@@ -37,9 +37,11 @@ void GameStateAsteroidsUnload(void);
 // Player
 static AEVec2 finalPlayerPosition;
 static float playerRotate;
+static int Playerscore;
 
 AEVec2 returnPlayerPosition();
 float returnPlayerRotation();
+int returnPlayerScore();
 //
 
 // Bullet

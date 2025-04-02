@@ -308,6 +308,44 @@ void GameStateAsteroidsInit(void)
 /******************************************************************************/
 void GameStateAsteroidsUpdate(void)
 {
+
+	// Track previous scores to detect changes
+	static std::unordered_map<int, int> previousScores;
+	static bool scoresChanged = false;
+
+	// Check if any scores have changed
+	scoresChanged = false;
+	for (const auto& pair : players) {
+		int id = pair.first;
+		int currentScore = pair.second.score;
+
+		// Check if this player's score is different from last time
+		if (previousScores.find(id) == previousScores.end() || previousScores[id] != currentScore) {
+			previousScores[id] = currentScore;
+			scoresChanged = true;
+		}
+	}
+
+	// Also check if the number of players changed
+	if (previousScores.size() != players.size()) {
+		scoresChanged = true;
+	}
+
+	// Display scores only when they've changed
+	if (scoresChanged) {
+		Client::displayPlayerScores();
+	}
+
+	// Clean up scores for players who are no longer present
+	for (auto it = previousScores.begin(); it != previousScores.end();) {
+		if (players.find(it->first) == players.end()) {
+			it = previousScores.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
 	// =========================================================
 	// Update according to input.
 	// Movement input is updated only when the game is active.
@@ -693,6 +731,10 @@ AEVec2 returnPlayerPosition()
 
 float returnPlayerRotation() {
 	return playerRotate;
+}
+
+int returnPlayerScore() {
+	return Playerscore;
 }
 
 AEVec2 returnBulletPosition() {
