@@ -57,6 +57,9 @@ const float			BULLET_SPEED			= 400.0f;		// bullet speed (m/s)
 const float         BOUNDING_RECT_SIZE      = 1.0f;         // this is the normalized bounding rectangle (width and height) sizes - AABB collision data
 
 static bool onValueChange{ true };
+float playerData::gameTimer = 60.0f;
+bool gameOver = false;
+bool winnerAnnounced = false;
 
 int playerCount = 1;
 
@@ -382,6 +385,54 @@ void GameStateAsteroidsUpdate(void)
 	//	}
 	//}
 
+	// Calculate delta time
+	float dt = (float)AEFrameRateControllerGetFrameTime();
+
+	// Update the game timer if the game is still running
+	if (!gameOver)
+	{
+		if (playerData::gameTimer <= 0.0f)
+		{
+			gameOver = true;
+			playerData::gameTimer = 0.0f;  // Clamp timer to zero
+			// For multiplayer, determine the winner here if needed.
+		}
+	}
+
+	// If the game is over, you might want to return early to skip further game logic
+	if (gameOver && !winnerAnnounced) {
+		// Announce the winner when the game is over
+		// Find the highest score
+		int maxScore = -1;
+		std::unordered_map<int, std::string> winnerIDs;  // Store player IDs if there are ties
+		for (const auto& pair : players) {
+			if (pair.second.score > maxScore) {
+				maxScore = pair.second.score;
+				winnerIDs.clear();  // Clear previous ties, as we found a new max score
+				winnerIDs[pair.first] = "";  // Store player ID
+			}
+			else if (pair.second.score == maxScore) {
+				winnerIDs[pair.first] = "";  // Add the tied player ID
+			}
+		}
+
+		// Output the winner(s) only once
+		if (winnerIDs.size() == 1) {
+			std::cout << "\n=== WINNER ===\n";
+			std::cout << "The winner is player with ID: " << winnerIDs.begin()->first << " with " << maxScore << " points!" << std::endl;
+		}
+		else {
+			std::cout << "\n=== IT'S A TIE ===\n";
+			std::cout << "The following players tied with " << maxScore << " points:\n";
+			for (const auto& winner : winnerIDs) {
+				std::cout << "Player ID: " << winner.first << std::endl;
+			}
+		}
+		winnerAnnounced = true;
+
+		return;  // Exit early to skip the rest of the game logic
+	}
+
 	if (!(sScore >= 5000)) {
 		if (!(sShipLives < 0)) {
 			if (AEInputCheckCurr(AEVK_UP)) // Moving forward
@@ -674,9 +725,7 @@ void GameStateAsteroidsDraw(void)
 	// Displaying ship lives and score values to user should there be an update to either values.
 	if(onValueChange)
 	{
-		sprintf_s(strBuffer, "Score: %d", sScore);
-		//AEGfxPrint(10, 10, (u32)-1, strBuffer);
-		printf("%s \n", strBuffer);
+		//printf("%s \n", strBuffer);
 
 		sprintf_s(strBuffer, "Ship Left: %d", sShipLives >= 0 ? sShipLives : 0);
 		//AEGfxPrint(600, 10, (u32)-1, strBuffer);
@@ -691,6 +740,20 @@ void GameStateAsteroidsDraw(void)
 			printf("       YOU ROCK!       \n");
 		}
 	}
+
+	// if uw to print the score at the top right
+	/*sprintf_s(strBuffer, "Score: %d", sScore);
+	AEGfxPrint(fontId, strBuffer, 0.4f, 0.9f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);*/
+
+	// Display the remaining time on screen
+	sprintf_s(strBuffer, "Time Left: %.1f", playerData::gameTimer);
+	AEGfxPrint(fontId, strBuffer, -0.9f, 0.9f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+
+	if (gameOver)
+	{
+		//printf("       GAME OVER       \n");
+	}
+
 	RenderPlayerNames(players);
 }
 

@@ -41,6 +41,9 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #define RETURN_CODE_3       3
 #define RETURN_CODE_4       4
 
+// Global timer variable on the server:
+float gameTimer = 60.0f; // 60 seconds game duration
+
 // Command IDs
 enum class CommandID : unsigned char {
     UNKNOWN = 0x0,  // Unknown command
@@ -101,6 +104,8 @@ private:
     void sendPlayerData(SOCKET);
     // Remove inactive players
     void removeInactivePlayers();
+    void updateGameTimer(float dt);
+    void sendTimeUpdate();
     // Clean up resources
     void cleanup();
 };
@@ -135,8 +140,32 @@ bool Server::initialize(const std::string& port) {
     return true; // Initialization successful
 }
 
+void Server::updateGameTimer(float dt) {
+    gameTimer -= dt;
+    if (gameTimer < 0.0f) {
+        gameTimer = 0.0f;
+    }
+}
+
+// Call this function every frame (or at fixed intervals)
+void Server::sendTimeUpdate() {
+    // Create a message that starts with a keyword, e.g., "TIME"
+    std::string timeMessage = "TIME " + std::to_string(gameTimer) + "\n";
+
+    // Broadcast this message to all players:
+    for (auto& [_, player] : players) {
+        sendto(listenerSocket, timeMessage.c_str(), timeMessage.size(), 0,
+            reinterpret_cast<sockaddr*>(&player.cAddr), sizeof(player));
+    }
+}
+
+
 // Run the server
 void Server::run() {
+
+    auto lastTime = std::chrono::steady_clock::now();
+    bool gameStarted = false; // Flag to start timer when 4 players are connected
+
     // Define the action lambda to handle UDP messages
     auto action = [this](UdpClientData message) {
         handleUdpClient(message); // Handle the UDP message
@@ -154,8 +183,30 @@ void Server::run() {
         10, 20, action, onDisconnect
     };
 
+    static float timeUpdateInterval = 0.0f;
+
     // Main server loop: Use recvfrom() to receive UDP messages
     while (true) {
+        auto currentTime = std::chrono::steady_clock::now();
+        float dt = std::chrono::duration<float>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        // Check if there are 4 or more players to start the game timer
+        if (!gameStarted && players.size() >= 4) {
+            gameStarted = true;
+            std::cout << "4 players have connected. Starting game timer." << std::endl;
+        }
+
+        if (gameStarted) {
+
+            updateGameTimer(dt);
+            timeUpdateInterval += dt;
+            if (timeUpdateInterval >= 1.0f) {  // Send update every 1 second
+                sendTimeUpdate();
+                timeUpdateInterval = 0.0f;
+            }
+        }
+
         sockaddr_in clientAddr{};
         socklen_t clientAddrSize = sizeof(clientAddr);
         char buffer[1024];  // Buffer to hold incoming data

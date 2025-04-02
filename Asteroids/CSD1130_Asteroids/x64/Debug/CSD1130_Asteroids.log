@@ -1,10 +1,5 @@
 ﻿  GameState_Asteroids.cpp
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-  (compiling source file 'Src/GameState_Asteroids.cpp')
-      C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
-      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
-  
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(88,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  (compiling source file 'Src/GameState_Asteroids.cpp')
-  
-  CSD1130_Asteroids.vcxproj -> C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
+C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(88,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(389,8): warning C4189: 'dt': local variable is initialized but not referenced
+  CSD1130_Asteroids.vcxproj -> C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe

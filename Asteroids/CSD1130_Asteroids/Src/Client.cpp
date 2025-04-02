@@ -26,7 +26,7 @@ bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
     if (!setupWinsock()) return false;
     if (!resolveAddress(serverIP, serverPort)) return false;
     if (!createSocket()) return false;
-   // if (!connectToServer()) return false;
+    // if (!connectToServer()) return false;
 
     return true;
 }
@@ -64,7 +64,7 @@ void Client::runScript(const std::string& scriptPath) {
     sendToServerUdp();
 }
 
-void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::string& port)
+void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port)
 {
     std::ifstream file(scriptPath);  // Open the file
 
@@ -83,7 +83,7 @@ void Client::sendToServerUdp() {
 
     ////get position of th ship.
     AEVec2 position = returnPlayerPosition();
-    
+
     // Direction ship is facing.
     float rot = returnPlayerRotation();
 
@@ -126,7 +126,7 @@ void Client::sendToServerUdp() {
     udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
 
     // Send message to the server using the pre-existing socket
-    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data   ), 0,
+    int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
         reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr));
 
     if (sendResult == SOCKET_ERROR) {
@@ -259,22 +259,48 @@ void Client::handleNetwork() {
         int receivedBytes = recvfrom(clientSocket, recvBuffer, sizeof(recvBuffer), 0,
             (sockaddr*)&serverAddr, &addrSize);
 
-        if (receivedBytes > 0 && playerID == -1) {
-            playerID = std::stoi(recvBuffer);
-            return;
+        if (receivedBytes <= 0)
+            continue;
+
+        // Null-terminate the received data
+        recvBuffer[receivedBytes] = '\0';
+        std::string message(recvBuffer);
+
+        // Check if the message is a time update
+        if (message.rfind("TIME ", 0) == 0) { // message starts with "TIME "
+            // Extract the timer value after the keyword
+            std::istringstream iss(message);
+            std::string timeToken;
+            float newTime;
+            iss >> timeToken >> newTime;
+
+            // Update the client-side timer
+            playerData::gameTimer = newTime;
+
+            // Update console output on the same line:
+            printf("\rTime Left: %.1f seconds", playerData::gameTimer);
+            fflush(stdout);
         }
+        else {
+            // Print out the message received from the server
+            // [Number of players] [Player ID] [Player X position] [Player Y position [Player IP]
+            if (receivedBytes > 0 && playerID == -1) {
+                playerID = std::stoi(recvBuffer);
+                return;
+            }
 
-        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
-        std::istringstream str(pData);
+            std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
+            std::istringstream str(pData);
 
-        playerData p;
+            playerData p;
 
-        // Updated parsing to include score
-        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
-            players[p.playerID] = p;  // Store new player data
+            // Updated parsing to include score
+            while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
+                players[p.playerID] = p;  // Store new player data
+            }
+
+            pCount = players.size();
         }
-
-        pCount = players.size();
     }
 }
 
