@@ -994,13 +994,21 @@ void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
 }
 
 void renderServerAsteroids() {
+	// First update all asteroid interpolation
+	updateAsteroidInterpolation();
+
 	std::lock_guard<std::mutex> lock(asteroidsMutex);
 
-	// Iterate through all asteroids from the server
-	for (std::unordered_map<std::string, asteroidData>::const_iterator it = asteroids.begin();
-		it != asteroids.end(); ++it) {
-		const std::string& id = it->first;
-		const asteroidData& asteroid = it->second;
+	// Debug information - uncomment if needed
+	// std::cout << "Rendering " << asteroids.size() << " asteroids" << std::endl;
+
+	// Iterate through all asteroids
+	for (const auto& pair : asteroids) {
+		const std::string& id = pair.first;
+		const auto& asteroid = pair.second;
+
+		// Debug print for asteroid positions - uncomment if needed
+		// std::cout << "Asteroid " << id << " at (" << asteroid.currentX << ", " << asteroid.currentY << ")" << std::endl;
 
 		if (!asteroid.active) continue;
 
@@ -1009,9 +1017,9 @@ void renderServerAsteroids() {
 		AEVec2 pos;
 		AEVec2 vel;
 
-		// Properly set the AEVec2 values with the correct number of arguments
+		// Use the interpolated position for rendering
 		AEVec2Set(&scale, asteroid.scaleX, asteroid.scaleY);
-		AEVec2Set(&pos, asteroid.x, asteroid.y);
+		AEVec2Set(&pos, asteroid.currentX, asteroid.currentY);
 		AEVec2Set(&vel, asteroid.velX, asteroid.velY);
 
 		// Create the asteroid object instance
@@ -1020,13 +1028,13 @@ void renderServerAsteroids() {
 		// Skip if creation failed
 		if (!pInst) continue;
 
-		// Set the position and velocity
+		// Set the position and velocity explicitly
 		pInst->posCurr.x = pos.x;
 		pInst->posCurr.y = pos.y;
 		pInst->velCurr.x = vel.x;
 		pInst->velCurr.y = vel.y;
 
-		// Need to calculate the transform matrix for the new asteroid
+		// Calculate the transform matrix for rendering
 		AEMtx33 trans, rot, scaleMtx;
 		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
 		AEMtx33Rot(&rot, pInst->dirCurr);

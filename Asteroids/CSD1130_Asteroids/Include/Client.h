@@ -24,7 +24,7 @@
 #include <chrono>
 #include <fstream>
 #include <sstream>
-
+#include <unordered_set>
 #include <unordered_map>
 
 // Return code constants for different exit conditions
@@ -169,6 +169,7 @@ private:
     void cleanup();
 
     void reportAsteroidDestruction(const std::string& asteroidID);
+    void updateAsteroidInterpolation();
 };
 
 struct playerData {
@@ -190,6 +191,10 @@ struct asteroidData {
     float velX, velY;    // Velocity
     float scaleX, scaleY;// Scale
     bool active;         // Whether the asteroid is active
+    float targetX, targetY;  // Target position from server 
+    float currentX, currentY;// Interpolated position for rendering
+    std::chrono::steady_clock::time_point lastUpdateTime; // Last update time
+    std::chrono::steady_clock::time_point creationTime;   // When the asteroid was created
 };
 
 

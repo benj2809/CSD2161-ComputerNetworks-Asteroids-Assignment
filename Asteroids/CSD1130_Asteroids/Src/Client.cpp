@@ -277,8 +277,11 @@ void Client::handleNetwork() {
         if (receivedData.find("ASTEROIDS") == 0) {
             std::lock_guard<std::mutex> lock(asteroidsMutex);
 
-            // Clear existing asteroids
-            asteroids.clear();
+            // Store current time for interpolation
+            auto currentTime = std::chrono::steady_clock::now();
+
+            // Keep track of updated asteroid IDs
+            std::vector<std::string> updatedIds;
 
             // Skip the "ASTEROIDS" prefix
             size_t pos = receivedData.find('|');
@@ -289,42 +292,105 @@ void Client::handleNetwork() {
                         nextPos = receivedData.length();
                     }
 
-                    // Extract the asteroid data segment
+                    // Extract asteroid data segment
                     std::string segment = receivedData.substr(pos + 1, nextPos - pos - 1);
 
                     // Skip empty segments
                     if (!segment.empty()) {
-                        // Parse the asteroid segment
+                        // Parse segment
                         std::istringstream iss(segment);
                         std::string id, value;
 
-                        // Get the asteroid ID
+                        // Get asteroid ID
                         if (std::getline(iss, id, ',')) {
-                            asteroidData asteroid;
+                            // Add to updated IDs
+                            updatedIds.push_back(id);
 
-                            // Parse x
-                            if (std::getline(iss, value, ',')) asteroid.x = (float)atof(value.c_str());
+                            // Check if asteroid exists in our map
+                            bool isNew = (asteroids.find(id) == asteroids.end());
 
-                            // Parse y
-                            if (std::getline(iss, value, ',')) asteroid.y = (float)atof(value.c_str());
+                            // Get or create asteroid
+                            asteroidData& asteroid = asteroids[id];
 
-                            // Parse velX
-                            if (std::getline(iss, value, ',')) asteroid.velX = (float)atof(value.c_str());
+                            // Try to extract numeric part from the id string (like "ast_12345")
+                            try {
+                                // Find first digit in the string
+                                size_t numStart = id.find_first_of("0123456789");
+                                if (numStart != std::string::npos) {
+                                    // Extract the numeric part and convert to int
+                                    asteroid.asteroidID = std::stoi(id.substr(numStart));
+                                }
+                                else {
+                                    // Fallback: use a hash of the string as the ID
+                                    asteroid.asteroidID = static_cast<int>(std::hash<std::string>{}(id));
+                                }
+                            }
+                            catch (...) {
+                                // If conversion fails, use a hash of the string
+                                asteroid.asteroidID = static_cast<int>(std::hash<std::string>{}(id));
+                            }
 
-                            // Parse velY
-                            if (std::getline(iss, value, ',')) asteroid.velY = (float)atof(value.c_str());
+                            // Store old position values (for existing asteroids)
+                            float oldTargetX = 0.0f;
+                            float oldTargetY = 0.0f;
 
-                            // Parse scaleX
-                            if (std::getline(iss, value, ',')) asteroid.scaleX = (float)atof(value.c_str());
+                            if (!isNew) {
+                                oldTargetX = asteroid.targetX;
+                                oldTargetY = asteroid.targetY;
+                            }
 
-                            // Parse scaleY
-                            if (std::getline(iss, value, ',')) asteroid.scaleY = (float)atof(value.c_str());
+                            // Parse position X
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.x = (float)atof(value.c_str());
+                                asteroid.targetX = asteroid.x;  // Update target position
+                            }
+
+                            // Parse position Y
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.y = (float)atof(value.c_str());
+                                asteroid.targetY = asteroid.y;  // Update target position
+                            }
+
+                            // Parse velocity X
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.velX = (float)atof(value.c_str());
+                            }
+
+                            // Parse velocity Y
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.velY = (float)atof(value.c_str());
+                            }
+
+                            // Parse scale X
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.scaleX = (float)atof(value.c_str());
+                            }
+
+                            // Parse scale Y
+                            if (std::getline(iss, value, ',')) {
+                                asteroid.scaleY = (float)atof(value.c_str());
+                            }
 
                             // Parse active
-                            if (std::getline(iss, value)) asteroid.active = (value == "1");
+                            if (std::getline(iss, value)) {
+                                asteroid.active = (value == "1");
+                            }
 
-                            // Add to map
-                            asteroids[id] = asteroid;
+                            // For new asteroids, initialize current position to target
+                            if (isNew) {
+                                asteroid.currentX = asteroid.targetX;
+                                asteroid.currentY = asteroid.targetY;
+                                asteroid.creationTime = currentTime;
+                            }
+                            // If there's a large position jump, snap to it (teleportation)
+                            else if (std::abs(oldTargetX - asteroid.targetX) > 100 ||
+                                std::abs(oldTargetY - asteroid.targetY) > 100) {
+                                asteroid.currentX = asteroid.targetX;
+                                asteroid.currentY = asteroid.targetY;
+                            }
+
+                            // Update timestamp
+                            asteroid.lastUpdateTime = currentTime;
                         }
                     }
 
@@ -332,8 +398,23 @@ void Client::handleNetwork() {
                 }
             }
 
-            // Debug output
-            std::cout << "Parsed " << asteroids.size() << " asteroids from server data" << std::endl;
+            // Remove asteroids that weren't in the update
+            for (auto it = asteroids.begin(); it != asteroids.end();) {
+                bool found = false;
+                for (const auto& id : updatedIds) {
+                    if (it->first == id) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    it = asteroids.erase(it);
+                }
+                else {
+                    ++it;
+                }
+            }
 
             continue;
         }
@@ -350,34 +431,6 @@ void Client::handleNetwork() {
 
         pCount = players.size();
     }
-}
-
-void Client::reportAsteroidDestruction(const std::string& asteroidID) {
-    std::string message = "DESTROY_ASTEROID|" + asteroidID;
-
-    // Set up server address
-    addrinfo hints;
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;        // IPv4
-    hints.ai_socktype = SOCK_DGRAM;   // UDP
-    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
-
-    // Get address information for the server
-    addrinfo* result = nullptr;
-    if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
-        std::cerr << "getaddrinfo failed when reporting asteroid destruction." << std::endl;
-        return;
-    }
-
-    // Extract the server address
-    sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
-
-    // Send to the server
-    sendto(clientSocket, message.c_str(), message.length(), 0,
-        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
-
-    // Clean up
-    freeaddrinfo(result);
 }
 
 // Remove
@@ -732,6 +785,61 @@ void Client::processReceivedData(std::vector<uint8_t>& recvQueue) {
     }
 }
 
+void Client::reportAsteroidDestruction(const std::string& asteroidID) {
+    std::string message = "DESTROY_ASTEROID|" + asteroidID;
+
+    // Set up server address
+    addrinfo hints;
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;        // IPv4
+    hints.ai_socktype = SOCK_DGRAM;   // UDP
+    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+
+    // Get address information for the server
+    addrinfo* result = nullptr;
+    if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
+        std::cerr << "getaddrinfo failed when reporting asteroid destruction." << std::endl;
+        return;
+    }
+
+    // Extract the server address
+    sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
+
+    // Send to the server
+    sendto(clientSocket, message.c_str(), message.length(), 0,
+        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
+
+    // Clean up
+    freeaddrinfo(result);
+}
+
+void updateAsteroidInterpolation() {
+    std::lock_guard<std::mutex> lock(asteroidsMutex);
+    auto currentTime = std::chrono::steady_clock::now();
+
+    for (auto& pair : asteroids) {
+        auto& asteroid = pair.second;
+        if (!asteroid.active) continue;
+
+        // Calculate time since last update
+        float dt = std::chrono::duration<float>(currentTime - asteroid.lastUpdateTime).count();
+
+        // Use shorter interpolation time for smoother movement
+        const float INTERP_TIME = 0.1f; // 100ms
+
+        // Interpolate position
+        if (dt < INTERP_TIME) {
+            float t = dt / INTERP_TIME;
+            asteroid.currentX = asteroid.currentX + (asteroid.targetX - asteroid.currentX) * t;
+            asteroid.currentY = asteroid.currentY + (asteroid.targetY - asteroid.currentY) * t;
+        }
+        else {
+            // If enough time has passed, just use the target position
+            asteroid.currentX = asteroid.targetX;
+            asteroid.currentY = asteroid.targetY;
+        }
+    }
+}
 /**
  * Clean up resources (sockets, Winsock) on exit
  */

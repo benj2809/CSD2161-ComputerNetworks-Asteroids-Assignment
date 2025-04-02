@@ -54,6 +54,7 @@ float returnBulletRotation();
 
 // Asteroid
 void renderServerAsteroids();
+void updateAsteroidInterpolation();
 //
 
 void syncPlayers(std::unordered_map<int, playerData>& pData);

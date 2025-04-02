@@ -93,8 +93,8 @@ private:
     const float ASTEROID_MIN_SCALE = 10.0f;
     const float ASTEROID_MAX_SCALE = 60.0f;
     const int ASTEROID_MAX_COUNT = 10; // Maximum number of asteroids
-    const float ASTEROID_CREATION_INTERVAL = 5.0f; // Seconds between asteroid creation
-    const float ASTEROID_UPDATE_INTERVAL = 0.1f; // Seconds between asteroid updates
+    const float ASTEROID_CREATION_INTERVAL = 2.0f; // Seconds between asteroid creation
+    const float ASTEROID_UPDATE_INTERVAL = 0.05f; // Seconds between asteroid updates
 
     // Set up Winsock
     bool setupWinsock();
@@ -281,7 +281,7 @@ void Server::createAsteroid() {
     // Generate a unique ID for the asteroid
     std::string asteroidID = "ast_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 
-    // Create random position outside the visible area but not too far
+    // Create random position outside the visible area (reverted to original positions)
     float x, y;
     // Randomly choose a side (0-3: top, right, bottom, left)
     int side = rand() % 4;
@@ -302,9 +302,8 @@ void Server::createAsteroid() {
         y = (float)(rand() % 1200 - 600); // Range: -600 to 600
     }
 
-    // Create more controlled velocity directed toward the center
-    // Use a fixed speed range to avoid extremely fast asteroids
-    float speed = (float)(rand() % 30 + 30) / 1000.0f; // Range: 0.03 to 0.06
+    // Create faster velocity directed toward the center (keeping the faster speed)
+    float speed = (float)(rand() % 90 + 90) / 1000.0f; // Range: 0.09 to 0.18 (3x faster than original)
 
     // Calculate direction vector to center (0,0)
     float dirX = 0.0f - x;
@@ -341,12 +340,11 @@ void Server::createAsteroid() {
     // Add the asteroid to the map
     asteroids[asteroidID] = newAsteroid;
 
-    std::cout << "Created asteroid: " << asteroidID
-        << " at (" << x << ", " << y << ")"
-        << " with velocity (" << velX << ", " << velY << ")"
-        << " and scale (" << scaleX << ", " << scaleY << ")" << std::endl;
+    //std::cout << "Created asteroid: " << asteroidID
+    //    << " at (" << x << ", " << y << ")"
+    //    << " with velocity (" << velX << ", " << velY << ")"
+    //    << " and scale (" << scaleX << ", " << scaleY << ")" << std::endl;
 }
-
 
 void Server::updateAsteroids() {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
@@ -363,19 +361,34 @@ void Server::updateAsteroids() {
     for (auto& [id, asteroid] : asteroids) {
         if (!asteroid.active) continue;
 
-        // Update position with smoother velocity multiplier
-        // Using 60.0f instead of 100.0f for less jittery movement
-        asteroid.x += asteroid.velX * deltaTime * 60.0f;
-        asteroid.y += asteroid.velY * deltaTime * 60.0f;
+        // Update position with increased velocity multiplier (from 60.0f to 120.0f)
+        asteroid.x += asteroid.velX * deltaTime * 120.0f;
+        asteroid.y += asteroid.velY * deltaTime * 120.0f;
 
         // Check if the asteroid is too far out of bounds (for cleanup)
         if (std::abs(asteroid.x) > 1200 || std::abs(asteroid.y) > 800) {
-            // Instead of immediate deletion, mark for respawn
-            asteroid.x = (float)(rand() % 1600 - 800);
-            asteroid.y = 400.0f;
+            // Instead of immediate deletion, mark for respawn with faster velocity
+            // Returning to original spawn positions
+            int side = rand() % 4;
+            if (side == 0) { // Top
+                asteroid.x = (float)(rand() % 1600 - 800);
+                asteroid.y = 400.0f;
+            }
+            else if (side == 1) { // Right
+                asteroid.x = 800.0f;
+                asteroid.y = (float)(rand() % 1200 - 600);
+            }
+            else if (side == 2) { // Bottom
+                asteroid.x = (float)(rand() % 1600 - 800);
+                asteroid.y = -400.0f;
+            }
+            else { // Left
+                asteroid.x = -800.0f;
+                asteroid.y = (float)(rand() % 1200 - 600);
+            }
 
-            // Create more controlled velocity directed toward the center
-            float speed = (float)(rand() % 30 + 30) / 1000.0f; // Range: 0.03 to 0.06
+            // Create faster velocity directed toward the center
+            float speed = (float)(rand() % 90 + 90) / 1000.0f; // Range: 0.09 to 0.18 (3x faster)
 
             // Calculate direction vector to center (0,0)
             float dirX = 0.0f - asteroid.x;
@@ -396,7 +409,6 @@ void Server::updateAsteroids() {
 
     lastAsteroidUpdate = now;
 }
-
 void Server::broadcastAsteroids(SOCKET socket) {
     std::string data = "ASTEROIDS";
 
