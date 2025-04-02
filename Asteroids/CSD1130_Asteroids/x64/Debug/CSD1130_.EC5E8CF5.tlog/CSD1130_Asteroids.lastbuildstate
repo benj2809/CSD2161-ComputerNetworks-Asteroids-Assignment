@@ -1,7 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 PlatformToolSet=v143:VCToolArchitecture=Native64Bit:VCToolsVersion=14.40.33807:TargetPlatformVersion=10.0.22621.0:
 Debug|x64|C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\|
 =======
 PlatformToolSet=v143:VCToolArchitecture=Native64Bit:VCToolsVersion=14.43.34808:TargetPlatformVersion=10.0.22621.0:
 Debug|x64|C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\|
 >>>>>>> dd1443166a3b0a67d9e34787a94ac19821c79ae6
+=======
+PlatformToolSet=v143:VCToolArchitecture=Native64Bit:VCToolsVersion=14.40.33807:TargetPlatformVersion=10.0.22621.0:
+Debug|x64|C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\|
+>>>>>>> 46cf8bc6943c233f5c7db3264c2e9d39e691895f

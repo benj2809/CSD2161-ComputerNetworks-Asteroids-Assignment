@@ -174,6 +174,7 @@ struct playerData {
     float x, y, rot;		// Position
     std::string cIP;
     int score;
+    static float gameTimer;
     // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
 };
 
