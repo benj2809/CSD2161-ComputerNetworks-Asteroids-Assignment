@@ -1,6 +1,12 @@
-﻿  GameState_Asteroids.cpp
+﻿  Client.cpp
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(88,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(394,8): warning C4189: 'dt': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1007,22): warning C4189: 'id': local variable is initialized but not referenced
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(21,44): warning C4458: declaration of 'serverIP' hides class member
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(21,63): warning C4458: declaration of 'serverPort' hides class member
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(59,43): warning C4100: 'scriptPath': unreferenced formal parameter
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(131,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(187,48): warning C4458: declaration of 'serverIP' hides class member
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(187,67): warning C4458: declaration of 'serverPort' hides class member
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(809,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  LINK : C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\\Bin\CSD1130_AsteroidsD.exe not found or not built by the last incremental link; performing full link
   CSD1130_Asteroids.vcxproj -> C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
