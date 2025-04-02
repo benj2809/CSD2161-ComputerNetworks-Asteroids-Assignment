@@ -34,7 +34,9 @@ void GameStateAsteroidsDraw(void);
 void GameStateAsteroidsFree(void);
 void GameStateAsteroidsUnload(void);
 static AEVec2 finalPosition;
+static float rotate;
 AEVec2 returnPosition();
+float returnRotation();
 void syncPlayers(std::unordered_map<int, playerData>& pData);
 // ---------------------------------------------------------------------------
 

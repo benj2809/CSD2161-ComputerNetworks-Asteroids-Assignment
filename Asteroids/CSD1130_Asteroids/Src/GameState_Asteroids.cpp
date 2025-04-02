@@ -572,6 +572,7 @@ void GameStateAsteroidsUpdate(void)
 			continue;
 		}
 		finalPosition = { spShip->posCurr.x, spShip->posCurr.y };
+		rotate = spShip->dirCurr;
 		break;
 	}
 
@@ -679,6 +680,10 @@ void GameStateAsteroidsUnload(void)
 AEVec2 returnPosition()
 {
 	return finalPosition;
+}
+
+float returnRotation() {
+	return rotate;
 }
 
 /******************************************************************************/
@@ -817,6 +822,7 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 			AEVec2 position;
 			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
 			pShips[pair.first]->posCurr = position;
+			pShips[pair.first]->dirCurr = pair.second.rot;
 			//std::cout << pShips[pair.first]->posCurr.x << " " << pShips[pair.first]->posCurr.y << std::endl;		
 
 		}

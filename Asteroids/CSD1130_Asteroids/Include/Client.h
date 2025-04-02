@@ -94,7 +94,7 @@ private:
     uint16_t serverPort;                   // Server port number
 
     // Player count
-    static int pCount;
+    static size_t pCount;
 
     // Player ID
     static int playerID;
@@ -168,7 +168,7 @@ private:
 
 struct playerData {
     int playerID;
-    float x, y;		// Position
+    float x, y, rot;		// Position
     std::string cIP;
     // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
 };

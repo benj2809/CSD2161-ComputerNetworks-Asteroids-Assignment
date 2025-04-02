@@ -2,7 +2,7 @@
 #include "AEEngine.h"
 #include "GameState_Asteroids.h"
 
-int Client::pCount;
+size_t Client::pCount;
 
 int Client::playerID = -1; // Store client's player ID
 
@@ -81,9 +81,12 @@ void Client::sendToServerUdp() {
 
     ////get position of th ship.
     AEVec2 position = returnPosition();
+    
+    // Direction ship is facing.
+    float rot = returnRotation();
 
     // const std::string message = "Hello World";  // Message to send
-    std::string message = std::to_string(position.x) + " " + std::to_string(position.y);
+    std::string message = std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(rot);
     //std::cout << position_1.c_str() << std::endl;
     // Prepare the UdpClientData structure
     UdpClientData udpMessage;
@@ -259,7 +262,7 @@ void Client::handleNetwork() {
 
         playerData p;
 
-        while (str >> p.playerID >> p.x >> p.y >> p.cIP) {
+        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.cIP) {
             players[p.playerID] = p;  // Store new player data
         }
 

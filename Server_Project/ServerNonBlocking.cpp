@@ -355,14 +355,14 @@ void Server::handleUdpClient(UdpClientData message)
     // Free up the thread (the thread will exit when the task completes)
 
     // For game
-    float x, y;
+    float x, y, rot;
     std::string clientIPstr(clientIp);
 
     std::string clientKey = clientIPstr + ":" +
                             std::to_string(clientPort);
 
     // Parse received position data
-    if (sscanf_s(messageData, "%f %f", &x, &y) != 2) {
+    if (sscanf_s(messageData, "%f %f %f", &x, &y, &rot) != 2) {
         std::cerr << "Position received invalid: " << messageData << std::endl;
         return;
     }
@@ -375,6 +375,7 @@ void Server::handleUdpClient(UdpClientData message)
         // Player exists, update position
         it->second.x = x;
         it->second.y = y;
+        it->second.rot = rot;
     } 
     else {
         // New player, assign ID
@@ -385,6 +386,7 @@ void Server::handleUdpClient(UdpClientData message)
         p.playerID = std::to_string(newPlayerID);
         p.x = x;
         p.y = y;
+        p.rot = rot;
         p.cAddr = clientAddr;
         p.cIP = clientIp;
 
@@ -401,7 +403,7 @@ void Server::sendPlayerData(SOCKET servSocket) {
     
     // [X pos] [Y pos] [IP]
     for (const auto& [pID, player] : players) {
-        data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + player.cIP + "\n";
+        data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + std::to_string(player.rot) + " " + player.cIP + "\n";
     }
 
     // Send this data to all clients

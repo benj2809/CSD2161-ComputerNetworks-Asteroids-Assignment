@@ -1,15 +1,5 @@
-﻿  Client.cpp
+﻿  GameState_Asteroids.cpp
 C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,1): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
 C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,1): message : '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(17,44): warning C4458: declaration of 'serverIP' hides class member
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(93,17): message : see declaration of 'Client::serverIP'
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(17,63): warning C4458: declaration of 'serverPort' hides class member
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(94,14): message : see declaration of 'Client::serverPort'
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(55,43): warning C4100: 'scriptPath': unreferenced formal parameter
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(117,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(154,48): warning C4458: declaration of 'serverIP' hides class member
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(93,17): message : see declaration of 'Client::serverIP'
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(154,67): warning C4458: declaration of 'serverPort' hides class member
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(94,14): message : see declaration of 'Client::serverPort'
-C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(266,30): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(85,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
   CSD1130_Asteroids.vcxproj -> C:\Users\Benjamin\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
