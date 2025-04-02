@@ -167,6 +167,8 @@ private:
      * Clean up resources (sockets, Winsock) on exit
      */
     void cleanup();
+
+    void reportAsteroidDestruction(const std::string& asteroidID);
 };
 
 struct playerData {
@@ -181,5 +183,16 @@ struct bulletData {
     float x, y, rot;
 };
 
+struct asteroidData {
+    int asteroidID;
+    float x, y;          // Position
+    float velX, velY;    // Velocity
+    float scaleX, scaleY;// Scale
+    bool active;         // Whether the asteroid is active
+};
+
+
 extern std::unordered_map<int, playerData> players;
 extern std::unordered_map<int, bulletData> bullets;
+extern std::unordered_map<std::string, asteroidData> asteroids;
+extern std::mutex asteroidsMutex;

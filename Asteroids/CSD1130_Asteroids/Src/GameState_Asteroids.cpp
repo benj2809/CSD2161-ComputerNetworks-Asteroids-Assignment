@@ -149,6 +149,11 @@ void				Helper_Wall_Collision();
 std::unordered_map<int, GameObjInst*> pShips; // Player ships
 std::vector<GameObjInst*> pBullets; // Bullets fired by this player
 
+extern std::mutex asteroidsMutex;
+extern std::unordered_map<std::string, asteroidData> asteroids;
+
+extern Client g_client;
+
 /******************************************************************************/
 /*!
 	"Load" function of this state
@@ -671,6 +676,8 @@ void GameStateAsteroidsDraw(void)
 	//	}
 	//}
 
+	renderServerAsteroids();
+
 	// Displaying ship lives and score values to user should there be an update to either values.
 	if(onValueChange)
 	{
@@ -920,5 +927,55 @@ void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
 
 		// Draw the name at the normalized position
 		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
+	}
+}
+
+void renderServerAsteroids() {
+	std::lock_guard<std::mutex> lock(asteroidsMutex);
+
+	// Iterate through all asteroids from the server
+	for (std::unordered_map<std::string, asteroidData>::const_iterator it = asteroids.begin();
+		it != asteroids.end(); ++it) {
+		const std::string& id = it->first;
+		const asteroidData& asteroid = it->second;
+
+		if (!asteroid.active) continue;
+
+		// Create a temporary asteroid instance for rendering
+		AEVec2 scale;
+		AEVec2 pos;
+		AEVec2 vel;
+
+		// Properly set the AEVec2 values with the correct number of arguments
+		AEVec2Set(&scale, asteroid.scaleX, asteroid.scaleY);
+		AEVec2Set(&pos, asteroid.x, asteroid.y);
+		AEVec2Set(&vel, asteroid.velX, asteroid.velY);
+
+		// Create the asteroid object instance
+		GameObjInst* pInst = gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+
+		// Skip if creation failed
+		if (!pInst) continue;
+
+		// Set the position and velocity
+		pInst->posCurr.x = pos.x;
+		pInst->posCurr.y = pos.y;
+		pInst->velCurr.x = vel.x;
+		pInst->velCurr.y = vel.y;
+
+		// Need to calculate the transform matrix for the new asteroid
+		AEMtx33 trans, rot, scaleMtx;
+		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
+		AEMtx33Rot(&rot, pInst->dirCurr);
+		AEMtx33Trans(&trans, pInst->posCurr.x, pInst->posCurr.y);
+		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
+		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
+
+		// Render the asteroid
+		AEGfxSetTransform(pInst->transform.m);
+		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+
+		// Destroy the instance after rendering
+		gameObjInstDestroy(pInst);
 	}
 }

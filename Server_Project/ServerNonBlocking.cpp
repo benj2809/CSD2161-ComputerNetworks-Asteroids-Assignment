@@ -76,6 +76,23 @@ private:
     std::mutex clientsMutex; // Mutex to protect access to the clients map
     std::string port; // Port number the server listens on
 
+    // For asteroids management
+    void createAsteroid();
+    void broadcastAsteroids(SOCKET socket);
+    void handleAsteroidDestruction(const std::string& asteroidID);
+    void updateAsteroids();
+
+    // Timers for asteroid creation and updates
+    std::chrono::steady_clock::time_point lastAsteroidCreation;
+    std::chrono::steady_clock::time_point lastAsteroidUpdate;
+
+    // Constants for asteroid creation
+    const float ASTEROID_MIN_SCALE = 10.0f;
+    const float ASTEROID_MAX_SCALE = 60.0f;
+    const int ASTEROID_MAX_COUNT = 10; // Maximum number of asteroids
+    const float ASTEROID_CREATION_INTERVAL = 5.0f; // Seconds between asteroid creation
+    const float ASTEROID_UPDATE_INTERVAL = 0.1f; // Seconds between asteroid updates
+
     // Set up Winsock
     bool setupWinsock();
     // Resolve the server's address
@@ -154,11 +171,30 @@ void Server::run() {
         10, 20, action, onDisconnect
     };
 
+    lastAsteroidCreation = std::chrono::steady_clock::now();
+    lastAsteroidUpdate = std::chrono::steady_clock::now();
+
     // Main server loop: Use recvfrom() to receive UDP messages
     while (true) {
         sockaddr_in clientAddr{};
         socklen_t clientAddrSize = sizeof(clientAddr);
         char buffer[1024];  // Buffer to hold incoming data
+
+        // Check if it's time to create a new asteroid
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration<float>(now - lastAsteroidCreation).count() > ASTEROID_CREATION_INTERVAL) {
+            createAsteroid();
+            lastAsteroidCreation = now;
+        }
+
+        // Update asteroid positions
+        if (std::chrono::duration<float>(now - lastAsteroidUpdate).count() > ASTEROID_UPDATE_INTERVAL) {
+            updateAsteroids();
+            lastAsteroidUpdate = now;
+        }
+
+        // Broadcast asteroid data to all clients
+        broadcastAsteroids(listenerSocket);
 
         // Receive the UDP message from the client
         int bytesReceived = recvfrom(listenerSocket, buffer, sizeof(buffer), 0,
@@ -184,6 +220,142 @@ void Server::run() {
     }
 }
 
+void Server::createAsteroid() {
+    // Only create a new asteroid if we're under the maximum
+    std::lock_guard<std::mutex> lock(asteroidsMutex);
+    if (asteroids.size() >= ASTEROID_MAX_COUNT) {
+        return;
+    }
+
+    // Generate a unique ID for the asteroid
+    std::string asteroidID = "ast_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+
+    // Create random position outside the visible area but not too far
+    float x, y;
+    // Randomly choose a side (0-3: top, right, bottom, left)
+    int side = rand() % 4;
+    if (side == 0) { // Top
+        x = (float)(rand() % 1600 - 800); // Range: -800 to 800
+        y = 400.0f; // Above the screen
+    }
+    else if (side == 1) { // Right
+        x = 800.0f; // Right of the screen
+        y = (float)(rand() % 1200 - 600); // Range: -600 to 600
+    }
+    else if (side == 2) { // Bottom
+        x = (float)(rand() % 1600 - 800); // Range: -800 to 800
+        y = -400.0f; // Below the screen
+    }
+    else { // Left
+        x = -800.0f; // Left of the screen
+        y = (float)(rand() % 1200 - 600); // Range: -600 to 600
+    }
+
+    // Create random velocity directed toward the center
+    float velX = (0.0f - x) * (float)(rand() % 50 + 50) / 1000.0f; // Range: 0.05 to 0.10 times distance
+    float velY = (0.0f - y) * (float)(rand() % 50 + 50) / 1000.0f; // Range: 0.05 to 0.10 times distance
+
+    // Random scale
+    float scaleX = (float)(rand() % (int)(ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE + 1) + ASTEROID_MIN_SCALE);
+    float scaleY = (float)(rand() % (int)(ASTEROID_MAX_SCALE - ASTEROID_MIN_SCALE + 1) + ASTEROID_MIN_SCALE);
+
+    // Create the asteroid
+    asteroidData newAsteroid;
+    newAsteroid.asteroidID = asteroidID;
+    newAsteroid.x = x;
+    newAsteroid.y = y;
+    newAsteroid.velX = velX;
+    newAsteroid.velY = velY;
+    newAsteroid.scaleX = scaleX;
+    newAsteroid.scaleY = scaleY;
+    newAsteroid.active = true;
+    newAsteroid.creationTime = std::chrono::steady_clock::now();
+
+    // Add the asteroid to the map
+    asteroids[asteroidID] = newAsteroid;
+
+    std::cout << "Created asteroid: " << asteroidID
+        << " at (" << x << ", " << y << ")"
+        << " with velocity (" << velX << ", " << velY << ")"
+        << " and scale (" << scaleX << ", " << scaleY << ")" << std::endl;
+}
+
+void Server::updateAsteroids() {
+    std::lock_guard<std::mutex> lock(asteroidsMutex);
+
+    auto now = std::chrono::steady_clock::now();
+    float deltaTime = std::chrono::duration<float>(now - lastAsteroidUpdate).count();
+
+    // Update position of all asteroids
+    for (auto& [id, asteroid] : asteroids) {
+        if (!asteroid.active) continue;
+
+        // Update position
+        asteroid.x += asteroid.velX * deltaTime * 100.0f; // Scale by 100 for better visibility
+        asteroid.y += asteroid.velY * deltaTime * 100.0f;
+
+        // Check if the asteroid is too far out of bounds (for cleanup)
+        if (std::abs(asteroid.x) > 1200 || std::abs(asteroid.y) > 800) {
+            // Instead of immediate deletion, mark for respawn
+            asteroid.x = (float)(rand() % 1600 - 800);
+            asteroid.y = 400.0f;
+            asteroid.velX = (float)(rand() % 100 - 50) / 300.0f;
+            asteroid.velY = (float)(rand() % 100 - 150) / 300.0f;
+        }
+    }
+
+    lastAsteroidUpdate = now;
+}
+
+void Server::broadcastAsteroids(SOCKET socket) {
+    std::string data = "ASTEROIDS";
+
+    // Lock the asteroids for thread safety
+    {
+        std::lock_guard<std::mutex> lock(asteroidsMutex);
+
+        // Format: ASTEROIDS|id1,x1,y1,velX1,velY1,scaleX1,scaleY1,active1|id2,...
+        for (const auto& [id, asteroid] : asteroids) {
+            if (!asteroid.active) continue; // Skip inactive asteroids
+
+            data += "|" + asteroid.asteroidID + ","
+                + std::to_string(asteroid.x) + ","
+                + std::to_string(asteroid.y) + ","
+                + std::to_string(asteroid.velX) + ","
+                + std::to_string(asteroid.velY) + ","
+                + std::to_string(asteroid.scaleX) + ","
+                + std::to_string(asteroid.scaleY) + ","
+                + (asteroid.active ? "1" : "0");
+        }
+    }
+
+    // Send this data to all clients
+    for (const auto& [_, player] : players) {
+        sendto(socket, data.c_str(), data.size(), 0, (sockaddr*)&player.cAddr, sizeof(player.cAddr));
+    }
+}
+
+void Server::handleAsteroidDestruction(const std::string& asteroidID) {
+    std::lock_guard<std::mutex> lock(asteroidsMutex);
+
+    // Find the asteroid
+    auto it = asteroids.find(asteroidID);
+    if (it != asteroids.end()) {
+        // Mark the asteroid as inactive
+        it->second.active = false;
+
+        std::cout << "Destroyed asteroid: " << asteroidID << std::endl;
+
+        // Broadcast the destruction to all clients
+        std::string data = "DESTROY_ASTEROID|" + asteroidID;
+        for (const auto& [_, player] : players) {
+            sendto(listenerSocket, data.c_str(), data.size(), 0, (sockaddr*)&player.cAddr, sizeof(player.cAddr));
+        }
+
+        // After a short delay, remove the asteroid
+        asteroids.erase(it);
+    }
+}
 
 // Set up Winsock
 bool Server::setupWinsock() {
@@ -340,6 +512,14 @@ void Server::handleUdpClient(UdpClientData message)
     std::string clientKey = clientIPstr + ":" +
         std::to_string(clientPort);
 
+    // Check if this is an asteroid destruction message
+    std::string messageStr(messageData);
+    if (messageStr.find("DESTROY_ASTEROID|") == 0) {
+        std::string asteroidID = messageStr.substr(17); // Skip "DESTROY_ASTEROID|"
+        handleAsteroidDestruction(asteroidID);
+        return;
+    }
+
     // Parse received position and score data - now looking for 4 values instead of 3
     if (sscanf_s(messageData, "%f %f %f %d", &x, &y, &rot, &score) != 4) {
         std::cerr << "Data received invalid: " << messageData << std::endl;
@@ -355,7 +535,6 @@ void Server::handleUdpClient(UdpClientData message)
         it->second.rot = rot;
         it->second.score = score; // Update the score
     }
-
     else {
         // New player, assign ID
         static int nextPlayerID = 1;

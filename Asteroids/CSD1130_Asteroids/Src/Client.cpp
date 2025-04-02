@@ -7,8 +7,10 @@ size_t Client::pCount;
 int Client::playerID = -1; // Store client's player ID
 
 std::unordered_map<int, playerData> players;
-
 std::mutex Client::mutex;
+
+std::unordered_map<std::string, asteroidData> asteroids;
+std::mutex asteroidsMutex;
 
 /**
  * Initialize the client with server connection details
@@ -251,7 +253,7 @@ bool Client::connectToServer() {
  */
 void Client::handleNetwork() {
     std::vector<uint8_t> recvQueue;
-    sockaddr_in serverAddr{};
+    sockaddr_in serverAddr;
     int addrSize = sizeof(serverAddr);
 
     while (true) {
@@ -259,13 +261,89 @@ void Client::handleNetwork() {
         int receivedBytes = recvfrom(clientSocket, recvBuffer, sizeof(recvBuffer), 0,
             (sockaddr*)&serverAddr, &addrSize);
 
-        if (receivedBytes > 0 && playerID == -1) {
+        if (receivedBytes <= 0) continue;
+
+        // Null-terminate the received data
+        recvBuffer[receivedBytes] = '\0';
+        std::string receivedData(recvBuffer, receivedBytes);
+
+        // Check if this is player ID assignment
+        if (receivedBytes <= 3 && playerID == -1) {
             playerID = std::stoi(recvBuffer);
-            return;
+            continue;
         }
 
-        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
-        std::istringstream str(pData);
+        // Check if this is asteroid data (format: "A|id,x,y,vx,vy,sx,sy,active;")
+        if (receivedData.find("A|") == 0) {
+            std::lock_guard<std::mutex> lock(asteroidsMutex);
+
+            // Clear existing asteroids
+            asteroids.clear();
+
+            // Skip the "A|" prefix
+            size_t pos = 2;
+            while (pos < receivedData.length()) {
+                size_t endPos = receivedData.find(';', pos);
+                if (endPos == std::string::npos) break;
+
+                std::string asteroidStr = receivedData.substr(pos, endPos - pos);
+                pos = endPos + 1;
+
+                // Parse the asteroid data
+                size_t commaPos = asteroidStr.find(',');
+                if (commaPos == std::string::npos) continue;
+
+                std::string id = asteroidStr.substr(0, commaPos);
+                std::string restData = asteroidStr.substr(commaPos + 1);
+
+                // Create asteroid struct
+                asteroidData asteroid;
+
+                // Parse position, velocity, scale, and active state
+                std::istringstream ss(restData);
+                std::string token;
+
+                // Parse x
+                if (std::getline(ss, token, ',')) asteroid.x = (float)atof(token.c_str());
+
+                // Parse y
+                if (std::getline(ss, token, ',')) asteroid.y = (float)atof(token.c_str());
+
+                // Parse velX
+                if (std::getline(ss, token, ',')) asteroid.velX = (float)atof(token.c_str());
+
+                // Parse velY
+                if (std::getline(ss, token, ',')) asteroid.velY = (float)atof(token.c_str());
+
+                // Parse scaleX
+                if (std::getline(ss, token, ',')) asteroid.scaleX = (float)atof(token.c_str());
+
+                // Parse scaleY
+                if (std::getline(ss, token, ',')) asteroid.scaleY = (float)atof(token.c_str());
+
+                // Parse active
+                if (std::getline(ss, token, ',')) asteroid.active = (token == "1");
+
+                // Add to map
+                asteroids[id] = asteroid;
+            }
+
+            continue;
+        }
+
+        // Check if this is asteroid destruction notification
+        if (receivedData.find("D|") == 0) {
+            std::string asteroidID = receivedData.substr(2);
+
+            // Remove the asteroid from the map
+            std::lock_guard<std::mutex> lock(asteroidsMutex);
+            asteroids.erase(asteroidID);
+
+            continue;
+        }
+
+        // Process player data (existing code)
+        std::istringstream str(receivedData);
 
         playerData p;
 
@@ -276,6 +354,34 @@ void Client::handleNetwork() {
 
         pCount = players.size();
     }
+}
+
+void Client::reportAsteroidDestruction(const std::string& asteroidID) {
+    std::string message = "DESTROY_ASTEROID|" + asteroidID;
+
+    // Set up server address
+    addrinfo hints;
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;        // IPv4
+    hints.ai_socktype = SOCK_DGRAM;   // UDP
+    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+
+    // Get address information for the server
+    addrinfo* result = nullptr;
+    if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
+        std::cerr << "getaddrinfo failed when reporting asteroid destruction." << std::endl;
+        return;
+    }
+
+    // Extract the server address
+    sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
+
+    // Send to the server
+    sendto(clientSocket, message.c_str(), message.length(), 0,
+        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
+
+    // Clean up
+    freeaddrinfo(result);
 }
 
 // Remove

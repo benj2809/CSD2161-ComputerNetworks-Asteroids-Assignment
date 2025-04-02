@@ -52,6 +52,10 @@ AEVec2 returnBulletPosition();
 float returnBulletRotation();
 //
 
+// Asteroid
+void renderServerAsteroids();
+//
+
 void syncPlayers(std::unordered_map<int, playerData>& pData);
 void RenderPlayerNames(std::unordered_map<int, playerData>& pData);
 // ---------------------------------------------------------------------------
