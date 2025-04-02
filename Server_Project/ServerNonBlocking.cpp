@@ -362,7 +362,7 @@ void Server::handleUdpClient(UdpClientData message)
                             std::to_string(clientPort);
 
     // Parse received position data
-    if (sscanf_s(messageData, "%f %f %f", &x, &y, &rot) != 2) {
+    if (sscanf_s(messageData, "%f %f %f", &x, &y, &rot) != 3) {
         std::cerr << "Position received invalid: " << messageData << std::endl;
         return;
     }
