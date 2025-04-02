@@ -75,6 +75,7 @@ private:
     std::unordered_map<std::string, SOCKET> clients; // Map of client keys to their sockets
     std::mutex clientsMutex; // Mutex to protect access to the clients map
     std::string port; // Port number the server listens on
+    allAestroids aestroids;
 
     // Set up Winsock
     bool setupWinsock();
@@ -131,8 +132,13 @@ bool Server::initialize(const std::string& port) {
     if (!createListener()) return false; // Create the listener socket
     if (!bindListener()) return false; // Bind the listener socket
     //if (!startListening()) return false; // Start listening for connections
+    
+	//intialise aestroids nunber 
+    aestroids.setAestroids(5);
 
     return true; // Initialization successful
+
+
 }
 
 // Run the server
@@ -405,7 +411,11 @@ void Server::sendPlayerData(SOCKET servSocket) {
     for (const auto& [pID, player] : players) {
         data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + std::to_string(player.rot) + " " + player.cIP + "\n";
     }
-
+	//create aestroids and send them to the client
+	aestroids.applyMovementVector(2, 2);
+    for (const auto& asteroid : aestroids.aestroid) {
+            data += "Asteroid " + std::to_string(asteroid.id) + " " + std::to_string(asteroid.x) + " " + std::to_string(asteroid.y) + "\n";
+        }
     // Send this data to all clients
     for (const auto& [_, player] : players) {
         // Convert `otherKey` back to sockaddr_in (You'll need to store these properly)

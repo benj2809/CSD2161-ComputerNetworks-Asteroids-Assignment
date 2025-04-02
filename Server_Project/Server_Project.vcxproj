@@ -133,6 +133,7 @@
     <ClInclude Include="taskqueue.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="playerdata.cpp" />
     <ClCompile Include="ServerNonBlocking.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
