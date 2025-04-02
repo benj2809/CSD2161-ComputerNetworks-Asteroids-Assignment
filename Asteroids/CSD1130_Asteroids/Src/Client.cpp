@@ -274,7 +274,7 @@ void Client::handleNetwork() {
         }
 
         // Check if this is asteroid data (format: "A|id,x,y,vx,vy,sx,sy,active;")
-        if (receivedData.find("A|") == 0) {
+        if (receivedData.find("ASTEROIDS") == 0) {
             std::lock_guard<std::mutex> lock(asteroidsMutex);
 
             // Clear existing asteroids
