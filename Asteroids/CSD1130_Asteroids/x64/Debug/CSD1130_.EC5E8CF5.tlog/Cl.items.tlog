@@ -1,21 +1,5 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp;C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Client.obj
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Collision.cpp;C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Collision.obj
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameStateMgr.cpp;C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameStateMgr.obj
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp;C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameState_Asteroids.obj
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp;C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Main.obj
-=======
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp;C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Client.obj
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Collision.cpp;C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Collision.obj
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameStateMgr.cpp;C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameStateMgr.obj
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp;C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameState_Asteroids.obj
-C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp;C:\Users\leewe\Documents\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Main.obj
->>>>>>> dd1443166a3b0a67d9e34787a94ac19821c79ae6
-=======
-C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp;C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Client.obj
-C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Collision.cpp;C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Collision.obj
-C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameStateMgr.cpp;C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameStateMgr.obj
-C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp;C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\GameState_Asteroids.obj
-C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp;C:\Users\ashle\OneDrive\Dokumen\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\x64\Debug\Main.obj
->>>>>>> 46cf8bc6943c233f5c7db3264c2e9d39e691895f
