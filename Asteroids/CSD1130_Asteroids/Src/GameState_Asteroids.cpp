@@ -762,6 +762,13 @@ void GameStateAsteroidsDraw(void)
 	}
 
 	RenderPlayerNames(players);
+
+	for (auto p : players)
+	{
+		int id = p.first;
+
+		DisplayScores(players, id);
+	}
 }
 
 /******************************************************************************/
@@ -1048,5 +1055,42 @@ void renderServerAsteroids() {
 
 		// Destroy the instance after rendering
 		gameObjInstDestroy(pInst);
+	}
+}
+
+void DisplayScores(const std::unordered_map<int, playerData>& players, int playerID) {
+	for (const auto& pair : players) {
+		const playerData& player = pair.second; // Get player data
+
+		// Positioning
+		AEVec2 position;
+		f32 normalizedX, normalizedY;
+		AEVec2Set(&position, player.x, player.y);
+
+		// Wrap the position to the window bounds
+		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
+		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+
+		// Normalize the wrapped position from window bounds to [-1, 1]
+		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
+		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
+
+		// Format the player's score text
+		char scoreText[256];
+		int id = pair.first;
+		int score = pair.second.score;
+		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, score);
+
+		// Set rendering settings (just like the reference)
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+		AEGfxTextureSet(NULL, 0, 0);
+		AEGfxSetTransparency(1.0f);
+
+		// Define the color for the text (green for the player, white for others)
+		u32 color = (id == playerID) ? 0x00FF00 : 0xFFFFFF;
+
+		// Draw the score at the normalized position (same as name rendering)
+		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
 	}
 }
