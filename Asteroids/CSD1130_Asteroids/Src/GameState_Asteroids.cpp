@@ -147,6 +147,7 @@ void				gameObjInstDestroy(GameObjInst * pInst);
 void				Helper_Wall_Collision();
 
 std::unordered_map<int, GameObjInst*> pShips; // Player ships
+std::vector<GameObjInst*> pBullets; // Bullets fired by this player
 
 /******************************************************************************/
 /*!
@@ -307,6 +308,44 @@ void GameStateAsteroidsInit(void)
 /******************************************************************************/
 void GameStateAsteroidsUpdate(void)
 {
+
+	// Track previous scores to detect changes
+	static std::unordered_map<int, int> previousScores;
+	static bool scoresChanged = false;
+
+	// Check if any scores have changed
+	scoresChanged = false;
+	for (const auto& pair : players) {
+		int id = pair.first;
+		int currentScore = pair.second.score;
+
+		// Check if this player's score is different from last time
+		if (previousScores.find(id) == previousScores.end() || previousScores[id] != currentScore) {
+			previousScores[id] = currentScore;
+			scoresChanged = true;
+		}
+	}
+
+	// Also check if the number of players changed
+	if (previousScores.size() != players.size()) {
+		scoresChanged = true;
+	}
+
+	// Display scores only when they've changed
+	if (scoresChanged) {
+		Client::displayPlayerScores();
+	}
+
+	// Clean up scores for players who are no longer present
+	for (auto it = previousScores.begin(); it != previousScores.end();) {
+		if (players.find(it->first) == players.end()) {
+			it = previousScores.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
 	// =========================================================
 	// Update according to input.
 	// Movement input is updated only when the game is active.
@@ -391,7 +430,7 @@ void GameStateAsteroidsUpdate(void)
 				AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y); // Vector for scaling the bullet
 				AEVec2Set(&pos, spShip->posCurr.x, spShip->posCurr.y); // Vector for the position of where the bullet is created - In this case it is created at the ship's location.
 				AEVec2Set(&vel, BULLET_SPEED * cosf(spShip->dirCurr), BULLET_SPEED * sinf(spShip->dirCurr)); // Vector for velocity of the bullet, it shoots in the direction the ship is facing.
-				gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr); // Creating an instance for the bullet.
+				pBullets.emplace_back(gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr)); // Creating an instance for the bullet.
 			}
 		}
 	}
@@ -473,6 +512,13 @@ void GameStateAsteroidsUpdate(void)
 							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
 															   NewpInst->boundingBox, NewpInst->velCurr,
 															   tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
+
+								// Removing pointer of destroyed bullet from pBullets container.
+								pBullets.erase(std::remove_if(pBullets.begin(), pBullets.end(), 
+									[pInst](GameObjInst* bullet) {
+										return bullet = pInst;
+									}), pBullets.end());
+
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision.
 								gameObjInstDestroy(NewpInst); // Likewise destroy the bullet.
 								AEVec2 scale{ (f32)(rand() % (60 - 10 + 1) + 10), (f32)(rand() % (60 - 10 + 1) + 10) }, pos{ (f32)(rand() % (900 - (-500) + 1) + (-500)), 400.f }, vel{ (f32)(rand() % (100 - (-100) + 1) + (-100)), (f32)(rand() % (100 - (-100) + 1) + (-100)) }; // Setting random values for the new ASTEROID to be created.
@@ -571,8 +617,8 @@ void GameStateAsteroidsUpdate(void)
 		if (pair.second.playerID != Client::getPlayerID()) {
 			continue;
 		}
-		finalPosition = { spShip->posCurr.x, spShip->posCurr.y };
-		rotate = spShip->dirCurr;
+		finalPlayerPosition = { spShip->posCurr.x, spShip->posCurr.y };
+		playerRotate = spShip->dirCurr;
 		break;
 	}
 
@@ -645,6 +691,7 @@ void GameStateAsteroidsDraw(void)
 			printf("       YOU ROCK!       \n");
 		}
 	}
+	RenderPlayerNames(players);
 }
 
 /******************************************************************************/
@@ -677,13 +724,25 @@ void GameStateAsteroidsUnload(void)
 	}
 }
 
-AEVec2 returnPosition()
+AEVec2 returnPlayerPosition()
 {
-	return finalPosition;
+	return finalPlayerPosition;
 }
 
-float returnRotation() {
-	return rotate;
+float returnPlayerRotation() {
+	return playerRotate;
+}
+
+int returnPlayerScore() {
+	return Playerscore;
+}
+
+AEVec2 returnBulletPosition() {
+	return finalBulletPosition;
+}
+
+float returnBulletRotation() {
+	return bulletRotate;
 }
 
 /******************************************************************************/
@@ -827,5 +886,39 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 
 		}
 		//std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
+	}
+}
+
+void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
+	for (const auto& pair : pData) {
+		const playerData& player = pair.second; // Get player data
+
+		AEVec2 position;
+		f32 normalizedX, normalizedY;
+		AEVec2Set(&position, player.x, player.y);
+
+		// Wrap the position to the window bounds
+		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
+		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+
+		// Normalize the wrapped position from window bounds to [-1, 1]
+		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
+		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
+
+		// Convert player ID to a string
+		char nameBuffer[100];
+		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
+
+		// Debug: Output the player position (normalized)
+		//printf("Rendering Player %d at normalized position: (%.2f, %.2f)\n", pair.first, normalizedX, normalizedY);
+
+		// Set rendering settings
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+		AEGfxTextureSet(NULL, 0, 0);
+		AEGfxSetTransparency(1.0f);
+
+		// Draw the name at the normalized position
+		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
 	}
 }

@@ -21,6 +21,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 // Globals
 float	 g_dt;
 double	 g_appTime;
+s8       fontId;
 
 
 /******************************************************************************/
@@ -58,6 +59,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	std::string server_Port;
 	uint16_t serverPort;
 	std::string path = {"../Resources/ClientInfo/client.txt"};
+	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 28);
 	
 	// Initialize and run the client
 	Client client;
@@ -112,6 +114,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 		gGameStateCurr = gGameStateNext;
 	}
 
+	AEGfxDestroyFont(fontId);
 	// free the system
 	AESysExit();
 }

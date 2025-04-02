@@ -8,6 +8,8 @@ int Client::playerID = -1; // Store client's player ID
 
 std::unordered_map<int, playerData> players;
 
+std::mutex Client::mutex;
+
 /**
  * Initialize the client with server connection details
  * @param serverIP The IP address of the server to connect to
@@ -80,13 +82,20 @@ void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::s
 void Client::sendToServerUdp() {
 
     ////get position of th ship.
-    AEVec2 position = returnPosition();
+    AEVec2 position = returnPlayerPosition();
     
     // Direction ship is facing.
-    float rot = returnRotation();
+    float rot = returnPlayerRotation();
+
+    int score = returnPlayerScore();
+
+    // Bullet info
 
     // const std::string message = "Hello World";  // Message to send
-    std::string message = std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(rot);
+    std::string message = std::to_string(position.x) + " " +
+        std::to_string(position.y) + " " +
+        std::to_string(rot) + " " +
+        std::to_string(score);
     //std::cout << position_1.c_str() << std::endl;
     // Prepare the UdpClientData structure
     UdpClientData udpMessage;
@@ -132,7 +141,26 @@ void Client::sendToServerUdp() {
 }
 
 
+void Client::displayPlayerScores() {
 
+    std::lock_guard<std::mutex> lock(mutex); // Use your existing mutex to prevent concurrent access
+    std::cout << "\n=== PLAYER SCORES ===" << std::endl;
+    std::cout << "Player ID\tScore\tPosition" << std::endl;
+    std::cout << "------------------------------------" << std::endl;
+
+    // Fix: Replace structured binding with traditional iterator approach
+    for (const auto& pair : players) {
+        int id = pair.first;
+        const playerData& player = pair.second;
+
+        std::cout << id << "\t\t"
+            << player.score << "\t"
+            << "(" << std::fixed << std::setprecision(1) << player.x
+            << ", " << std::fixed << std::setprecision(1) << player.y << ")"
+            << (id == playerID ? " [YOU]" : "") << std::endl;
+    }
+    std::cout << "======================" << std::endl;
+}
 
 
 /**
@@ -222,67 +250,31 @@ bool Client::connectToServer() {
  * Continuously receives and processes data from the server
  */
 void Client::handleNetwork() {
-    std::vector<uint8_t> recvQueue;  // Buffer for incoming data
-    sockaddr_in serverAddr{};        // Store server's address
+    std::vector<uint8_t> recvQueue;
+    sockaddr_in serverAddr{};
     int addrSize = sizeof(serverAddr);
 
     while (true) {
-        char recvBuffer[1024];  // Temporary buffer for received data
+        char recvBuffer[1024];
         int receivedBytes = recvfrom(clientSocket, recvBuffer, sizeof(recvBuffer), 0,
             (sockaddr*)&serverAddr, &addrSize);
 
-        //if (receivedBytes == SOCKET_ERROR) {
-        //    int errorCode = WSAGetLastError();
-        //    if (errorCode == WSAEWOULDBLOCK) {
-        //        // Non-blocking operation would block, try again later
-        //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        //        continue;
-        //    }
-        //    // Other error occurred
-        //    std::lock_guard<std::mutex> lock(mutex);
-        //    std::cerr << "recvfrom() failed with error: " << errorCode << std::endl;
-        //    break;
-        //}
-
-        // Print out the message received from the server
-        // [Number of players] [Player ID] [Player X position] [Player Y position [Player IP]
-        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
-
-        if (receivedBytes > 0 && playerID == -1) { // Only set once
-            playerID = std::stoi(recvBuffer); // Convert received ID to integer
-            //std::cout << "Received My Player ID: " << playerID << std::endl;
+        if (receivedBytes > 0 && playerID == -1) {
+            playerID = std::stoi(recvBuffer);
             return;
         }
 
-        //std::cout << "Received message from server: " << pData << std::endl;
-
+        std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
         std::istringstream str(pData);
-
-        // std::unordered_map<std::string, playerData> updatedPlayers;
 
         playerData p;
 
-        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.cIP) {
+        // Updated parsing to include score
+        while (str >> p.playerID >> p.x >> p.y >> p.rot >> p.score >> p.cIP) {
             players[p.playerID] = p;  // Store new player data
         }
 
         pCount = players.size();
-        // Replace old player data with the updated one
-        // players = std::move(updatedPlayers);
-        // std::cout << "Created new player: " << p.playerID << " " << p.x << " " << p.y << " " << players.size() << std::endl;
-
-        //// Optionally add received data to the processing queue (if needed for future processing)
-        //recvQueue.insert(recvQueue.end(), recvBuffer, recvBuffer + receivedBytes);
-
-        //// Process received data if needed
-        //processReceivedData(recvQueue
-
-        // Debug
-        /*for (const auto& pair : players) {
-            int id = pair.first;
-            playerData player = pair.second;
-            std::cout << "Player " << id << ": (" << player.x << ", " << player.y << ")\n";
-        }*/
     }
 }
 

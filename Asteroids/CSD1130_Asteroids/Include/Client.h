@@ -15,6 +15,7 @@
 
 // 3. Standard C++ headers
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <thread>
@@ -81,6 +82,8 @@ public:
     void getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port);
     void sendToServerUdp();
 
+    static void displayPlayerScores();
+
     // Get player count
     static const int getPlayerCount() { return pCount; }
     
@@ -89,7 +92,7 @@ public:
 
 private:
     SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection
-    std::mutex mutex;                      // Mutex for thread synchronization
+    static std::mutex mutex;                      // Mutex for thread synchronization
     std::string serverIP;                  // Server IP address
     uint16_t serverPort;                   // Server port number
 
@@ -170,7 +173,13 @@ struct playerData {
     int playerID;
     float x, y, rot;		// Position
     std::string cIP;
+    int score;
     // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
 };
 
+struct bulletData {
+    float x, y, rot;
+};
+
 extern std::unordered_map<int, playerData> players;
+extern std::unordered_map<int, bulletData> bullets;
