@@ -3,8 +3,9 @@
 std::unordered_map<std::string, playerData> players;
 int aestroidID = 0; // Add a global variable to keep track of the aestroid ID
 
-void allAestroids::setAestroids(int numAestroids)
+void allAestroids::setAestroids(int numAestroids_in)
 {
+	numAestroids = numAestroids_in;//update the number of aestroids number
     for (int i = 0; i < numAestroids; i++)
     {
         aestroids a;
