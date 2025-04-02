@@ -273,59 +273,6 @@ bool Server::startListening() {
     return true;
 }
 
-// Handle a connected client
-// DELETE
-void Server::handleClient(SOCKET clientSocket) {
-    sockaddr_in clientAddr{};
-    int addrSize = sizeof(clientAddr);
-    getpeername(clientSocket, (sockaddr*)&clientAddr, &addrSize); // Get client's address
-
-    char clientIP[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN); // Convert IP to string
-    uint16_t clientPort = ntohs(clientAddr.sin_port); // Convert port to host byte order
-    std::string clientKey = std::string(clientIP) + ":" + std::to_string(clientPort); // Create client key
-
-    {
-        std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
-        clients[clientKey] = clientSocket; // Add the client to the map
-    }
-
-    std::cout << "Client connected: " << clientKey << std::endl;
-
-    char buffer[MAX_STR_LEN] = {};
-    while (true) {
-        int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0); // Receive data from the client
-        if (bytesRead <= 0) {
-            std::cout << "Client disconnected: " << clientKey << std::endl;
-            break;
-        }
-
-        CommandID commandID = static_cast<CommandID>(buffer[0]); // Extract the command ID
-        switch (commandID) {
-        case CommandID::REQ_QUIT:
-            std::cout << "Client requested to quit: " << clientKey << std::endl;
-            break;
-        case CommandID::REQ_ECHO:
-            forwardEchoMessage(buffer, bytesRead, clientKey); // Forward the echo message
-            break;
-        case CommandID::REQ_LISTUSERS:
-            sendUserList(clientSocket); // Send the list of users
-            break;
-        default:
-            std::cerr << "Unhandled command ID: " << static_cast<int>(commandID) << std::endl;
-            break;
-        }
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
-        clients.erase(clientKey); // Remove the client from the map
-    }
-
-    shutdown(clientSocket, SD_BOTH); // Shutdown the client socket
-    closesocket(clientSocket); // Close the client socket
-}
-
 void Server::handleUdpClient(UdpClientData message)
 {
     // Unpack the message and client address from the incoming message
@@ -413,6 +360,7 @@ void Server::sendPlayerData(SOCKET servSocket) {
     }
 	//create aestroids and send them to the client
 	aestroids.applyMovementVector(2, 2);
+	data += "Number of Asteroids:  " + std::to_string(aestroids.numAestroids) + "\n";
     for (const auto& asteroid : aestroids.aestroid) {
             data += "Asteroid " + std::to_string(asteroid.id) + " " + std::to_string(asteroid.x) + " " + std::to_string(asteroid.y) + "\n";
         }
@@ -439,81 +387,6 @@ void Server::removeInactivePlayers() {
         }
     }
 }
-
-// Forward an echo message to another client
-// DELETE
-void Server::forwardEchoMessage(char* buffer, int length, const std::string& senderKey) {
-    uint32_t destIPAddress;
-    uint16_t destPort;
-
-    // Extract destination IP and port from the buffer
-    memcpy(&destIPAddress, buffer + 1, 4);
-    memcpy(&destPort, buffer + 5, 2);
-    destPort = ntohs(destPort); // Convert port to host byte order
-
-    char destIP[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &destIPAddress, destIP, INET_ADDRSTRLEN); // Convert IP to string
-    std::string destKey = std::string(destIP) + ":" + std::to_string(destPort); // Create destination key
-
-    std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
-
-    // Check if the destination client exists
-    if (clients.find(destKey) == clients.end()) {
-        std::cerr << "Client not found: " << destKey << std::endl;
-        char errorMessage[1] = { static_cast<char>(CommandID::ECHO_ERROR) };
-        send(clients[senderKey], errorMessage, 1, 0); // Send an error message to the sender
-        return;
-    }
-
-    buffer[0] = static_cast<char>(CommandID::RSP_ECHO); // Change the command ID to RSP_ECHO
-    send(clients[destKey], buffer, length, 0); // Send the message to the destination client
-
-    uint32_t senderIP;
-    uint16_t senderPort;
-
-    // Extract sender IP and port from the sender key
-    inet_pton(AF_INET, senderKey.substr(0, senderKey.find(':')).c_str(), &senderIP);
-    senderPort = htons(std::stoi(senderKey.substr(senderKey.find(':') + 1)));
-
-    // Update the buffer with the sender's IP and port
-    memcpy(buffer + 1, &senderIP, 4);
-    memcpy(buffer + 5, &senderPort, 2);
-
-    send(clients[senderKey], buffer, length, 0); // Send the updated message back to the sender
-
-    // Log the forwarded message
-    std::cout << "==========FORWARDED MESSAGE==========\n"
-        << "From: " << senderKey << "\n"
-        << "To: " << destKey << "\n"
-        << "Message: " << std::string(buffer + 11, length - 11) << "\n"
-        << "======================================\n";
-}
-
-// Send the list of connected users to a client
-// Delete
-void Server::sendUserList(SOCKET clientSocket) {
-    std::lock_guard<std::mutex> lock(clientsMutex); // Lock the clients map
-
-    uint16_t userCount = htons(clients.size()); // Convert user count to network byte order
-    std::vector<char> message;
-    message.push_back(static_cast<char>(CommandID::RSP_LISTUSERS)); // Add the command ID
-    message.insert(message.end(), reinterpret_cast<char*>(&userCount), reinterpret_cast<char*>(&userCount) + 2); // Add the user count
-
-    // Add each client's IP and port to the message
-    for (const auto& [key, socket] : clients) {
-        uint32_t ip;
-        uint16_t port;
-        std::string ipStr = key.substr(0, key.find(':'));
-        inet_pton(AF_INET, ipStr.c_str(), &ip); // Convert IP to binary
-        port = htons(std::stoi(key.substr(key.find(':') + 1))); // Convert port to network byte order
-
-        message.insert(message.end(), reinterpret_cast<char*>(&ip), reinterpret_cast<char*>(&ip) + 4); // Add IP
-        message.insert(message.end(), reinterpret_cast<char*>(&port), reinterpret_cast<char*>(&port) + 2); // Add port
-    }
-
-    send(clientSocket, message.data(), message.size(), 0); // Send the message to the client
-}
-
 // Handle server disconnection
 void Server::onDisconnect() {
     std::cout << "Server is shutting down..." << std::endl;
