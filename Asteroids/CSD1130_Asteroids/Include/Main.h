@@ -33,6 +33,8 @@ extern double	g_appTime;
 #include "Collision.h"
 #include "Client.h"
 
+extern s8	fontId;
+
 #endif
 
 

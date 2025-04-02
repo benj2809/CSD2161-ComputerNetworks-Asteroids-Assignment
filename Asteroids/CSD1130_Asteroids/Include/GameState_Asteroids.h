@@ -38,6 +38,7 @@ static float rotate;
 AEVec2 returnPosition();
 float returnRotation();
 void syncPlayers(std::unordered_map<int, playerData>& pData);
+void RenderPlayerNames(std::unordered_map<int, playerData>& pData);
 // ---------------------------------------------------------------------------
 
 #endif // CSD1130_GAME_STATE_PLAY_H_

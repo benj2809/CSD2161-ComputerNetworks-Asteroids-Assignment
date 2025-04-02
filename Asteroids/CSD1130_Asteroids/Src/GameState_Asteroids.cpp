@@ -645,6 +645,7 @@ void GameStateAsteroidsDraw(void)
 			printf("       YOU ROCK!       \n");
 		}
 	}
+	RenderPlayerNames(players);
 }
 
 /******************************************************************************/
@@ -827,5 +828,39 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 
 		}
 		//std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
+	}
+}
+
+void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
+	for (const auto& pair : pData) {
+		const playerData& player = pair.second; // Get player data
+
+		AEVec2 position;
+		f32 normalizedX, normalizedY;
+		AEVec2Set(&position, player.x, player.y);
+
+		// Wrap the position to the window bounds
+		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
+		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+
+		// Normalize the wrapped position from window bounds to [-1, 1]
+		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
+		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
+
+		// Convert player ID to a string
+		char nameBuffer[100];
+		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
+
+		// Debug: Output the player position (normalized)
+		printf("Rendering Player %d at normalized position: (%.2f, %.2f)\n", pair.first, normalizedX, normalizedY);
+
+		// Set rendering settings
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+		AEGfxTextureSet(NULL, 0, 0);
+		AEGfxSetTransparency(1.0f);
+
+		// Draw the name at the normalized position
+		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
 	}
 }
