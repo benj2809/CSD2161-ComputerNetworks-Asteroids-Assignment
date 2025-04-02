@@ -147,6 +147,7 @@ void				gameObjInstDestroy(GameObjInst * pInst);
 void				Helper_Wall_Collision();
 
 std::unordered_map<int, GameObjInst*> pShips; // Player ships
+std::vector<GameObjInst*> pBullets; // Bullets fired by this player
 
 /******************************************************************************/
 /*!
@@ -391,7 +392,7 @@ void GameStateAsteroidsUpdate(void)
 				AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y); // Vector for scaling the bullet
 				AEVec2Set(&pos, spShip->posCurr.x, spShip->posCurr.y); // Vector for the position of where the bullet is created - In this case it is created at the ship's location.
 				AEVec2Set(&vel, BULLET_SPEED * cosf(spShip->dirCurr), BULLET_SPEED * sinf(spShip->dirCurr)); // Vector for velocity of the bullet, it shoots in the direction the ship is facing.
-				gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr); // Creating an instance for the bullet.
+				pBullets.emplace_back(gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr)); // Creating an instance for the bullet.
 			}
 		}
 	}
@@ -473,6 +474,13 @@ void GameStateAsteroidsUpdate(void)
 							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
 															   NewpInst->boundingBox, NewpInst->velCurr,
 															   tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
+
+								// Removing pointer of destroyed bullet from pBullets container.
+								pBullets.erase(std::remove_if(pBullets.begin(), pBullets.end(), 
+									[pInst](GameObjInst* bullet) {
+										return bullet = pInst;
+									}), pBullets.end());
+
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision.
 								gameObjInstDestroy(NewpInst); // Likewise destroy the bullet.
 								AEVec2 scale{ (f32)(rand() % (60 - 10 + 1) + 10), (f32)(rand() % (60 - 10 + 1) + 10) }, pos{ (f32)(rand() % (900 - (-500) + 1) + (-500)), 400.f }, vel{ (f32)(rand() % (100 - (-100) + 1) + (-100)), (f32)(rand() % (100 - (-100) + 1) + (-100)) }; // Setting random values for the new ASTEROID to be created.
@@ -571,8 +579,8 @@ void GameStateAsteroidsUpdate(void)
 		if (pair.second.playerID != Client::getPlayerID()) {
 			continue;
 		}
-		finalPosition = { spShip->posCurr.x, spShip->posCurr.y };
-		rotate = spShip->dirCurr;
+		finalPlayerPosition = { spShip->posCurr.x, spShip->posCurr.y };
+		playerRotate = spShip->dirCurr;
 		break;
 	}
 
@@ -678,13 +686,21 @@ void GameStateAsteroidsUnload(void)
 	}
 }
 
-AEVec2 returnPosition()
+AEVec2 returnPlayerPosition()
 {
-	return finalPosition;
+	return finalPlayerPosition;
 }
 
-float returnRotation() {
-	return rotate;
+float returnPlayerRotation() {
+	return playerRotate;
+}
+
+AEVec2 returnBulletPosition() {
+	return finalBulletPosition;
+}
+
+float returnBulletRotation() {
+	return bulletRotate;
 }
 
 /******************************************************************************/
@@ -852,7 +868,7 @@ void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
 		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
 
 		// Debug: Output the player position (normalized)
-		printf("Rendering Player %d at normalized position: (%.2f, %.2f)\n", pair.first, normalizedX, normalizedY);
+		//printf("Rendering Player %d at normalized position: (%.2f, %.2f)\n", pair.first, normalizedX, normalizedY);
 
 		// Set rendering settings
 		AEGfxSetRenderMode(AE_GFX_RM_COLOR);

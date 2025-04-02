@@ -80,10 +80,12 @@ void Client::getServerInfo(const std::string& scriptPath,std::string& IP, std::s
 void Client::sendToServerUdp() {
 
     ////get position of th ship.
-    AEVec2 position = returnPosition();
+    AEVec2 position = returnPlayerPosition();
     
     // Direction ship is facing.
-    float rot = returnRotation();
+    float rot = returnPlayerRotation();
+
+    // Bullet info
 
     // const std::string message = "Hello World";  // Message to send
     std::string message = std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(rot);

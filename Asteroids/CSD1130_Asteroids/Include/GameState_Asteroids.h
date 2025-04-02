@@ -33,10 +33,23 @@ void GameStateAsteroidsUpdate(void);
 void GameStateAsteroidsDraw(void);
 void GameStateAsteroidsFree(void);
 void GameStateAsteroidsUnload(void);
-static AEVec2 finalPosition;
-static float rotate;
-AEVec2 returnPosition();
-float returnRotation();
+
+// Player
+static AEVec2 finalPlayerPosition;
+static float playerRotate;
+
+AEVec2 returnPlayerPosition();
+float returnPlayerRotation();
+//
+
+// Bullet
+static AEVec2 finalBulletPosition;
+static float bulletRotate;
+
+AEVec2 returnBulletPosition();
+float returnBulletRotation();
+//
+
 void syncPlayers(std::unordered_map<int, playerData>& pData);
 void RenderPlayerNames(std::unordered_map<int, playerData>& pData);
 // ---------------------------------------------------------------------------

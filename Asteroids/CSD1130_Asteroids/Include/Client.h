@@ -173,4 +173,9 @@ struct playerData {
     // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
 };
 
+struct bulletData {
+    float x, y, rot;
+};
+
 extern std::unordered_map<int, playerData> players;
+extern std::unordered_map<int, bulletData> bullets;

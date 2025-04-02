@@ -11,4 +11,10 @@ struct playerData {
 	std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
 };
 
+struct bulletData {
+	std::string bulletID;
+	float x, y, dir;
+};
+
 std::unordered_map<std::string, playerData> players;
+std::unordered_map<std::string, bulletData> bullets;

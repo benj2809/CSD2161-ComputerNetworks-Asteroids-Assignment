@@ -401,7 +401,7 @@ void Server::handleUdpClient(UdpClientData message)
 void Server::sendPlayerData(SOCKET servSocket) {
     std::string data; // = std::to_string(players.size()) + " ";
     
-    // [X pos] [Y pos] [IP]
+    // [Player ID] [X pos] [Y pos] [Rotation] [IP]
     for (const auto& [pID, player] : players) {
         data += player.playerID + " " + std::to_string(player.x) + " " + std::to_string(player.y) + " " + std::to_string(player.rot) + " " + player.cIP + "\n";
     }
