@@ -91,13 +91,14 @@ public:
 
     // Get player ID for this client
     static const int getPlayerID() { return playerID; }
-
+    SOCKET getSocket() { return clientSocket; }
     // Get bullets data safely with locking
     static void lockBullets() { bulletsMutex.lock(); }
     static void unlockBullets() { bulletsMutex.unlock(); }
 
     void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID = "");
     void reportAsteroidDestruction(const std::string& asteroidID);
+    void reportPlayerScore(const std::string& playerID, int score);
     void updateAsteroidInterpolation();
 
 private:

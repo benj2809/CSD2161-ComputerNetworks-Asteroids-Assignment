@@ -85,7 +85,8 @@ private:
     void broadcastAsteroids(SOCKET socket);
     void handleAsteroidDestruction(const std::string& asteroidID);
     void updateAsteroids();
-
+    void updatePlayerScore(const std::string& scoreUpdateData);
+    void broadcastScoreUpdate(const playerData& player);
     // Timers for asteroid creation and updates
     std::chrono::steady_clock::time_point lastAsteroidCreation;
     std::chrono::steady_clock::time_point lastAsteroidUpdate;
@@ -667,7 +668,12 @@ void Server::handleUdpClient(UdpClientData message)
         }
         return;
     }
-
+    if (messageStr.find("UPDATE_SCORE|") == 0)
+    {
+        std::string scoreUpdateData = messageStr.substr(13); // Skip "SCORE_UPDATE|"
+        updatePlayerScore(scoreUpdateData);
+        return;
+    }
 
     // Parse received position and score data - now looking for 4 values instead of 3
     if (sscanf_s(messageData, "%f %f %f %d", &x, &y, &rot, &score) != 4) {
@@ -880,6 +886,31 @@ void Server::updateBullets() {
     }
 
     lastBulletUpdate = now;
+}
+void Server::updatePlayerScore(const std::string& scoreUpdateData) {
+    std::istringstream iss(scoreUpdateData);
+    std::string playerID;
+    int newScore;
+
+    // Parse the player ID and new score from the message
+    iss >> playerID >> newScore;
+
+    // Find the player in the players map
+    auto it = players.find(playerID);
+    if (it != players.end()) {
+        // Update the player's score
+        it->second.score = newScore;
+
+        // Broadcast the updated score to all clients
+        broadcastScoreUpdate(it->second);
+    }
+}
+void Server::broadcastScoreUpdate(const playerData& player) {
+    std::string data = "SCORE_UPDATE|" + player.playerID + " " + std::to_string(player.score);
+
+    for (const auto& [_, player] : players) {
+        sendto(listenerSocket, data.c_str(), data.size(), 0, (sockaddr*)&player.cAddr, sizeof(player.cAddr));
+    }
 }
 
 // Handle server disconnection

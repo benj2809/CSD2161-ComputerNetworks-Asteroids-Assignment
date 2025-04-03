@@ -964,6 +964,14 @@ void checkBulletAsteroidCollisions() {
 				// Report asteroid destruction to server
 				g_client.reportAsteroidDestruction(asteroidPair.first);
 
+				// Update the player's score
+				int playerID = Client::getPlayerID();
+				if (players.find(playerID) != players.end()) {
+					players[playerID].score += 100; // Increment the player's score by 100
+
+					g_client.reportPlayerScore(players[playerID].cIP, players[playerID].score);
+				}
+
 				// Remove the bullet from the local list
 				bulletIt = bullets.erase(bulletIt);
 
@@ -1007,7 +1015,26 @@ void checkBulletAsteroidCollisions() {
 
 				// Report asteroid destruction to server
 				g_client.reportAsteroidDestruction(asteroidPair.first);
-
+				// Update the player's score
+				int playerID = Client::getPlayerID();
+				//Get the port number of the client 
+				SOCKET clientSocket = g_client.getSocket();
+				sockaddr_in addr;
+				int addrLen = sizeof(addr);
+				uint16_t port_out = 0;
+				if (getsockname(clientSocket, (sockaddr*)&addr, &addrLen) == 0) {
+					// Convert the port number from network byte order to host byte order
+					uint16_t port = ntohs(addr.sin_port);
+					port_out = port;
+					std::cout << "Port number: " << port << std::endl;
+				}
+				else {
+					std::cerr << "Failed to get socket name" << std::endl;
+				}
+				if (players.find(playerID) != players.end()) {
+					Playerscore += 100; // Increment the player's score by 100
+					g_client.reportPlayerScore(players[playerID].cIP +":"+ std::to_string(port_out), Playerscore);
+				}
 				// Destroy the bullet game object
 				gameObjInstDestroy(bullet);
 				it = pBullets.erase(it);
@@ -1322,6 +1349,11 @@ void DisplayScores(const std::unordered_map<int, playerData>& players, int playe
 		// Draw the score at the normalized position (same as name rendering)
 		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
 	}
+}
+
+void sendGameScoreToServer(int playerID, int score)
+{
+
 }
 
 void renderNetworkBullets() {

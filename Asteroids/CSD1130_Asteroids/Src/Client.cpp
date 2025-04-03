@@ -531,7 +531,25 @@ void Client::handleNetwork() {
             unlockBullets();
             continue;
         }
-
+        //hadling of the score.
+		if (receivedData.find("SCORE_UPDATE") == 0)
+		{
+            //print message.
+			std::cout << "Received SCORE_UPDATE message: " << receivedData << std::endl;
+            // Skip the "SCORE_UPDATE|" prefix
+			size_t pos = receivedData.find('|');
+			if (pos != std::string::npos) {
+				std::string scoreData = receivedData.substr(pos + 1);
+				std::istringstream str(scoreData);
+				// Parse player ID and score
+				int id;
+				int score;
+				while (str >> id >> score) {
+					players[id].score = score;  // Update player score
+				}
+			}
+			continue;
+		}
         // Handle player data updates
         std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
         std::istringstream str(pData);
@@ -927,6 +945,31 @@ void Client::reportAsteroidDestruction(const std::string& asteroidID) {
     // Clean up
     freeaddrinfo(result);
 }
+
+void Client::reportPlayerScore(const std::string& playerID, int score)
+{// Create the message to send to server
+	std::string message = "UPDATE_SCORE|" + playerID + " " + std::to_string(score);
+	// Set up server address
+	addrinfo hints;
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;        // IPv4
+	hints.ai_socktype = SOCK_DGRAM;   // UDP
+	hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+	// Get address information for the server
+	addrinfo* result = nullptr;
+	if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
+		std::cerr << "getaddrinfo failed when reporting player score." << std::endl;
+		return;
+	}
+	// Extract the server address
+	sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
+	// Send to the server
+	sendto(clientSocket, message.c_str(), message.length(), 0,
+		reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
+	// Clean up
+	freeaddrinfo(result);
+}
+
 
 void updateAsteroidInterpolation() {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
