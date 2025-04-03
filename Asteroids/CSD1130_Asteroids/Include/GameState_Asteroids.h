@@ -50,6 +50,7 @@ static float bulletRotate;
 
 AEVec2 returnBulletPosition();
 float returnBulletRotation();
+void renderNetworkBullets();
 //
 
 // Asteroid

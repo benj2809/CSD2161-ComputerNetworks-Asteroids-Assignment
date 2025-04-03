@@ -86,11 +86,11 @@ void TaskQueue<TItem, TAction, TOnDisconnect>::work(TaskQueue<TItem, TAction, TO
 	{
 		{
 			std::lock_guard<std::mutex> usersLock{ _stdoutMutex };
-			std::cout
+			/*std::cout
 				<< "Thread ["
 				<< std::this_thread::get_id()
 				<< "] is waiting for a task."
-				<< std::endl;
+				<< std::endl;*/
 		}
 		std::optional<TItem> item = tq.consume();
 		if (!item)
@@ -101,11 +101,11 @@ void TaskQueue<TItem, TAction, TOnDisconnect>::work(TaskQueue<TItem, TAction, TO
 
 		{
 			std::lock_guard<std::mutex> usersLock{ _stdoutMutex };
-			std::cout
-				<< "Thread ["
-				<< std::this_thread::get_id()
-				<< "] is executing a task."
-				<< std::endl;
+			//std::cout
+			//	<< "Thread ["
+			//	<< std::this_thread::get_id()
+			//	<< "] is executing a task."
+			//	<< std::endl;
 		}
 
 		if (!action(*item))
@@ -117,11 +117,11 @@ void TaskQueue<TItem, TAction, TOnDisconnect>::work(TaskQueue<TItem, TAction, TO
 
 	{
 		std::lock_guard<std::mutex> usersLock{ _stdoutMutex };
-		std::cout
+		/*std::cout
 			<< "Thread ["
 			<< std::this_thread::get_id()
 			<< "] is exiting."
-			<< std::endl;
+			<< std::endl;*/
 	}
 }
 
