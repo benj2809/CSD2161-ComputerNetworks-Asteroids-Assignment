@@ -1122,7 +1122,6 @@ void DisplayScores(const std::unordered_map<int, playerData>& players, int playe
 		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
 	}
 }
-}
 
 void renderNetworkBullets() {
 	// Use Client's lock/unlock methods instead of trying to access the mutex directly
