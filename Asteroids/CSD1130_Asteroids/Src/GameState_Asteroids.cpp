@@ -155,6 +155,7 @@ std::vector<GameObjInst*> pBullets; // Bullets fired by this player
 extern std::mutex asteroidsMutex;
 extern std::unordered_map<std::string, asteroidData> asteroids;
 
+extern std::unordered_map<std::string, bulletData> bullets;
 extern Client g_client;
 
 /******************************************************************************/
@@ -482,11 +483,37 @@ void GameStateAsteroidsUpdate(void)
 			// Shoot a bullet if space is triggered (Create a new object instance)
 			if (AEInputCheckTriggered(AEVK_SPACE)) // Creating a bullet when space is triggered.
 			{
+				std::cout << "Spacebar pressed - PlayerID: " << Client::getPlayerID()
+					<< " at position (" << spShip->posCurr.x << "," << spShip->posCurr.y << ")" << std::endl;
+
 				AEVec2 scale{}, pos{}, vel{};
 				AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y); // Vector for scaling the bullet
-				AEVec2Set(&pos, spShip->posCurr.x, spShip->posCurr.y); // Vector for the position of where the bullet is created - In this case it is created at the ship's location.
-				AEVec2Set(&vel, BULLET_SPEED * cosf(spShip->dirCurr), BULLET_SPEED * sinf(spShip->dirCurr)); // Vector for velocity of the bullet, it shoots in the direction the ship is facing.
-				pBullets.emplace_back(gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr)); // Creating an instance for the bullet.
+				AEVec2Set(&pos, spShip->posCurr.x, spShip->posCurr.y); // Vector for the position
+				AEVec2Set(&vel, BULLET_SPEED * cosf(spShip->dirCurr), BULLET_SPEED * sinf(spShip->dirCurr)); // Vector for velocity
+
+				// Create local bullet instance
+				GameObjInst* pBullet = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, spShip->dirCurr);
+				pBullets.emplace_back(pBullet);
+
+				// Also create entry in bullets map for network synchronization
+				std::string bulletID = std::to_string(Client::getPlayerID()) + "_" + std::to_string(pBullets.size());
+
+				bulletData bulletInfo;
+				bulletInfo.bulletID = bulletID;
+				bulletInfo.x = pos.x;
+				bulletInfo.y = pos.y;
+				bulletInfo.velX = vel.x;
+				bulletInfo.velY = vel.y;
+				bulletInfo.dir = spShip->dirCurr;
+				bulletInfo.fromLocalPlayer = true;
+
+				// Add to bullets map with lock
+				Client::lockBullets();
+				bullets[bulletID] = bulletInfo;
+				Client::unlockBullets();
+
+				// Report bullet creation to server
+				g_client.reportBulletCreation(pos, vel, spShip->dirCurr);
 			}
 		}
 	}
@@ -716,6 +743,9 @@ void GameStateAsteroidsDraw(void)
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 	}
 
+	renderServerAsteroids();
+	renderNetworkBullets();
+
 	//for (std::pair<const int, GameObjInst*>& pair : pShips)
 	//{
 	//	GameObjInst* ship = pair.second; // Get ship instance
@@ -726,8 +756,6 @@ void GameStateAsteroidsDraw(void)
 	//		AEGfxMeshDraw(ship->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 	//	}
 	//}
-
-	renderServerAsteroids();
 
 	// Displaying ship lives and score values to user should there be an update to either values.
 	if (onValueChange)
@@ -1099,4 +1127,57 @@ void DisplayScores(const std::unordered_map<int, playerData>& players, int playe
 		// Draw the score at the normalized position (same as name rendering)
 		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
+}
+
+void renderNetworkBullets() {
+	// Use Client's lock/unlock methods instead of trying to access the mutex directly
+	Client::lockBullets();
+
+	// Access the bullets map directly (it should be an extern variable)
+	for (const auto& pair : bullets) {
+		// Skip bullets from the local player (already rendered locally)
+		if (pair.second.fromLocalPlayer) {
+			continue;
+		}
+
+		const bulletData& bullet = pair.second;
+
+		// Create a temporary bullet instance for rendering
+		AEVec2 scale;
+		AEVec2 pos;
+		AEVec2 vel;
+
+		AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y);
+		AEVec2Set(&pos, bullet.x, bullet.y);
+		AEVec2Set(&vel, bullet.velX, bullet.velY);
+
+		// Create the bullet object instance
+		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.dir);
+
+		// Skip if creation failed
+		if (!pInst) continue;
+
+		// Set the position and direction explicitly
+		pInst->posCurr.x = pos.x;
+		pInst->posCurr.y = pos.y;
+		pInst->dirCurr = bullet.dir;
+
+		// Calculate the transform matrix for rendering
+		AEMtx33 trans, rot, scaleMtx;
+		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
+		AEMtx33Rot(&rot, pInst->dirCurr);
+		AEMtx33Trans(&trans, pInst->posCurr.x, pInst->posCurr.y);
+		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
+		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
+
+		// Render the bullet
+		AEGfxSetTransform(pInst->transform.m);
+		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+
+		// Destroy the instance after rendering
+		gameObjInstDestroy(pInst);
+	}
+
+	// Don't forget to unlock when done
+	Client::unlockBullets();
 }

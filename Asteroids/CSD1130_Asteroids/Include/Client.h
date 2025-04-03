@@ -13,6 +13,8 @@
 #include <windows.h>  // Must come after Winsock2
 #pragma comment(lib, "ws2_32.lib")
 
+#include "AEEngine.h" // Include for AEVec2 type
+
 // 3. Standard C++ headers
 #include <iostream>
 #include <iomanip>
@@ -90,11 +92,19 @@ public:
     // Get player ID for this client
     static const int getPlayerID() { return playerID; }
 
+    // Get bullets data safely with locking
+    static void lockBullets() { bulletsMutex.lock(); }
+    static void unlockBullets() { bulletsMutex.unlock(); }
+
+    void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir);
+
 private:
     SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection
     static std::mutex mutex;                      // Mutex for thread synchronization
     std::string serverIP;                  // Server IP address
     uint16_t serverPort;                   // Server port number
+
+    static std::mutex bulletsMutex;  // Mutex for thread-safe access to bullets
 
     // Player count
     static size_t pCount;
@@ -153,7 +163,11 @@ struct playerData {
 };
 
 struct bulletData {
-    float x, y, rot;
+    std::string bulletID;
+    float x, y;              // Position
+    float velX, velY;        // Velocity
+    float dir;               // Direction
+    bool fromLocalPlayer;    // Flag to identify locally created bullets
 };
 
 struct asteroidData {
@@ -170,6 +184,6 @@ struct asteroidData {
 
 
 extern std::unordered_map<int, playerData> players;
-extern std::unordered_map<int, bulletData> bullets;
+extern std::unordered_map<std::string, bulletData> bullets;
 extern std::unordered_map<std::string, asteroidData> asteroids;
 extern std::mutex asteroidsMutex;

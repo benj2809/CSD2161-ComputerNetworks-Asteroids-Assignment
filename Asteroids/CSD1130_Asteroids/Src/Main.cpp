@@ -22,6 +22,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 float	 g_dt;
 double	 g_appTime;
 s8       fontId;
+Client g_client;  // Global client object
 
 
 /******************************************************************************/
@@ -62,12 +63,11 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 20);
 	
 	// Initialize and run the client
-	Client client;
-	client.getServerInfo(path, serverIP, server_Port);
+	g_client.getServerInfo(path, serverIP, server_Port);
 	serverPort = static_cast<uint16_t>(std::stoul(server_Port));
-	if (!client.initialize(serverIP, serverPort)) {
+	if (!g_client.initialize(serverIP, serverPort)) {
 		std::cerr << "Client initialization failed." << std::endl;
-		return RETURN_CODE_1; 
+		return RETURN_CODE_1;
 	}
 	while(gGameStateCurr != GS_QUIT)
 	{
@@ -91,7 +91,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 				AESysFrameStart();
 
 				GameStateUpdate();
-				client.run();
+				g_client.run();
 
 				GameStateDraw();
 

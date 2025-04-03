@@ -14,7 +14,10 @@ struct playerData {
 
 struct bulletData {
 	std::string bulletID;
-	float x, y, dir;
+	float x, y;              // Position
+	float velX, velY;        // Velocity
+	float dir;               // Direction
+	std::chrono::steady_clock::time_point creationTime; // When the bullet was created
 };
 
 struct asteroidData {
