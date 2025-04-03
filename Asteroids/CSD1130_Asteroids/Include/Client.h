@@ -135,35 +135,6 @@ private:
     void handleNetwork();
 
     /**
-     * Process commands from a script file
-     * @param scriptPath Path to the script file
-     */
-    void handleScript(const std::string& scriptPath);
-
-    /**
-     * Process interactive user input from the console
-     */
-    void handleUserInput();
-
-    /**
-    *
-    */
-    void handleID();
-
-    /**
-     * Send a message to the server
-     * @param message The message to send as a vector of bytes
-     */
-    void sendMessage(const std::vector<uint8_t>& message);
-
-    /**
-     * Process received data from the server
-     * Handles different command types and updates the receive queue
-     * @param recvQueue Vector containing received data that needs processing
-     */
-    void processReceivedData(std::vector<uint8_t>& recvQueue);
-
-    /**
      * Clean up resources (sockets, Winsock) on exit
      */
     void cleanup();

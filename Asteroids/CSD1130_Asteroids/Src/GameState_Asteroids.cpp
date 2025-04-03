@@ -189,9 +189,9 @@ void GameStateAsteroidsLoad(void)
 
 	AEGfxMeshStart();
 	AEGfxTriAdd(
-		-0.5f, 0.5f, 0xFFFF0000, 0.0f, 0.0f,
-		-0.5f, -0.5f, 0xFFFF0000, 0.0f, 0.0f,
-		0.5f, 0.0f, 0xFFFFFFFF, 0.0f, 0.0f);
+		-1.0f, 1.0f, 0xFFFF0000, 0.0f, 0.0f,
+		-1.0f, -1.0f, 0xFFFF0000, 0.0f, 0.0f,
+		1.5f, 0.0f, 0xFFFF0000, 0.0f, 0.0f);
 
 	pObj->pMesh = AEGfxMeshEnd();
 	AE_ASSERT_MESG(pObj->pMesh, "fail to create object!!");
@@ -754,7 +754,7 @@ void GameStateAsteroidsDraw(void)
 
 	// Display the remaining time on screen
 	sprintf_s(strBuffer, "Time Left: %.1f", playerData::gameTimer);
-	AEGfxPrint(fontId, strBuffer, -0.9f, 0.9f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+	AEGfxPrint(fontId, strBuffer, -0.9f, 0.9f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	if (gameOver)
 	{
@@ -982,6 +982,9 @@ void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
 		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
 		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
 
+		normalizedX -= 0.2f;
+		normalizedY += 0.1f;
+
 		// Convert player ID to a string
 		char nameBuffer[100];
 		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
@@ -996,7 +999,7 @@ void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
 		AEGfxSetTransparency(1.0f);
 
 		// Draw the name at the normalized position
-		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
+		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }
 
@@ -1075,6 +1078,9 @@ void DisplayScores(const std::unordered_map<int, playerData>& players, int playe
 		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
 		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
 
+		normalizedX -= 0.2f;
+		normalizedY += 0.1f;
+
 		// Format the player's score text
 		char scoreText[256];
 		int id = pair.first;
@@ -1091,6 +1097,6 @@ void DisplayScores(const std::unordered_map<int, playerData>& players, int playe
 		u32 color = (id == playerID) ? 0x00FF00 : 0xFFFFFF;
 
 		// Draw the score at the normalized position (same as name rendering)
-		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f); // White text
+		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }

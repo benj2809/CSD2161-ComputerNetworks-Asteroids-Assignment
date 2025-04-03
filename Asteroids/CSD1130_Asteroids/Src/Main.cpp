@@ -48,7 +48,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	AESysInit (instanceH, show, 800, 600, 1, 60, false, NULL);
 
 	// Changing the window title
-	AESysSetWindowTitle("Asteroids Demo!");
+	AESysSetWindowTitle("Assignment 4");
 
 	//set background color
 	AEGfxSetBackgroundColor(0.0f, 0.0f, 0.0f);
@@ -59,7 +59,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	std::string server_Port;
 	uint16_t serverPort;
 	std::string path = {"../Resources/ClientInfo/client.txt"};
-	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 28);
+	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 20);
 	
 	// Initialize and run the client
 	Client client;
