@@ -12,6 +12,9 @@ std::mutex Client::mutex;
 std::unordered_map<std::string, asteroidData> asteroids;
 std::mutex asteroidsMutex;
 
+std::mutex Client::bulletsMutex;  // Definition of the static mutex
+std::unordered_map<std::string, bulletData> bullets;  // Global bullets map
+
 /**
  * Initialize the client with server connection details
  * @param serverIP The IP address of the server to connect to
@@ -251,6 +254,10 @@ bool Client::connectToServer() {
  * Thread function to handle network operations
  * Continuously receives and processes data from the server
  */
+ /**
+  * Thread function to handle network operations
+  * Continuously receives and processes data from the server
+  */
 void Client::handleNetwork() {
     std::vector<uint8_t> recvQueue;
     sockaddr_in serverAddr;
@@ -270,6 +277,7 @@ void Client::handleNetwork() {
         // Check if this is player ID assignment
         if (receivedBytes <= 3 && playerID == -1) {
             playerID = std::stoi(recvBuffer);
+            std::cout << "Assigned Player ID: " << playerID << std::endl;
             continue;
         }
 
@@ -419,6 +427,120 @@ void Client::handleNetwork() {
             continue;
         }
 
+        // Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
+// Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
+        if (receivedData.find("BULLETS") == 0) {
+            lockBullets();
+
+            // Debug output - occasionally to avoid spam
+            static int counter = 0;
+            if (++counter % 100 == 0) {
+                std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
+            }
+
+            // REMOVED: Don't clear remote bullets on every update
+            // Keep a list of updated bullet IDs to track which ones to keep
+            std::unordered_set<std::string> updatedBulletIDs;
+            int newBullets = 0;
+            int updatedBullets = 0;
+
+            // Skip the "BULLETS" prefix
+            size_t pos = receivedData.find('|');
+            if (pos != std::string::npos) {
+                while (pos < receivedData.length()) {
+                    size_t nextPos = receivedData.find('|', pos + 1);
+                    if (nextPos == std::string::npos) {
+                        nextPos = receivedData.length();
+                    }
+
+                    // Extract bullet data segment
+                    std::string segment = receivedData.substr(pos + 1, nextPos - pos - 1);
+
+                    // Skip empty segments
+                    if (!segment.empty()) {
+                        // Parse segment
+                        std::istringstream iss(segment);
+                        std::string id, value;
+
+                        // Get bullet ID
+                        if (std::getline(iss, id, ',')) {
+                            // Add this ID to our updated set
+                            updatedBulletIDs.insert(id);
+
+                            // Check if this bullet was fired by the local player
+                            std::string playerIDStr = std::to_string(playerID) + "_";
+                            if (id.find(playerIDStr) == 0) {
+                                pos = nextPos;
+                                continue;  // Skip processing this bullet
+                            }
+
+                            bool isNewBullet = (bullets.find(id) == bullets.end());
+
+                            // Get or create bullet data
+                            bulletData& bullet = bullets[id];
+                            bullet.bulletID = id;
+                            bullet.fromLocalPlayer = false;
+
+                            // Parse position X
+                            if (std::getline(iss, value, ',')) {
+                                bullet.x = (float)atof(value.c_str());
+                            }
+
+                            // Parse position Y
+                            if (std::getline(iss, value, ',')) {
+                                bullet.y = (float)atof(value.c_str());
+                            }
+
+                            // Parse velocity X
+                            if (std::getline(iss, value, ',')) {
+                                bullet.velX = (float)atof(value.c_str());
+                            }
+
+                            // Parse velocity Y
+                            if (std::getline(iss, value, ',')) {
+                                bullet.velY = (float)atof(value.c_str());
+                            }
+
+                            // Parse direction
+                            if (std::getline(iss, value)) {
+                                bullet.dir = (float)atof(value.c_str());
+                            }
+
+                            // Track stats
+                            if (isNewBullet) newBullets++;
+                            else updatedBullets++;
+                        }
+                    }
+
+                    pos = nextPos;
+                }
+            }
+
+            // Now remove bullets that weren't updated (they've probably expired on the server)
+            int removedBullets = 0;
+            for (auto it = bullets.begin(); it != bullets.end();) {
+                // Keep local bullets and bullets that were updated
+                if (it->second.fromLocalPlayer || updatedBulletIDs.find(it->first) != updatedBulletIDs.end()) {
+                    ++it;
+                }
+                else {
+                    it = bullets.erase(it);
+                    removedBullets++;
+                }
+            }
+
+            // Debug output - occasionally to avoid spam
+            if (counter % 100 == 0) {
+                std::cout << "Bullets: " << newBullets << " new, "
+                    << updatedBullets << " updated, "
+                    << removedBullets << " removed" << std::endl;
+            }
+
+            unlockBullets();
+            continue;
+        }
+
+        // Handle player data updates
         std::string pData = std::string(recvBuffer, recvBuffer + receivedBytes);
         std::istringstream str(pData);
 
@@ -840,6 +962,60 @@ void updateAsteroidInterpolation() {
         }
     }
 }
+
+void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir) {
+    if (this->clientSocket == INVALID_SOCKET) {
+        std::cerr << "ERROR: Cannot send bullet creation - socket is invalid!" << std::endl;
+        return;
+    }
+
+    // Format: "BULLET_CREATE posX posY velX velY dir"
+    std::string message = "BULLET_CREATE " +
+        std::to_string(pos.x) + " " +
+        std::to_string(pos.y) + " " +
+        std::to_string(vel.x) + " " +
+        std::to_string(vel.y) + " " +
+        std::to_string(dir);
+
+    std::cout << "Sending bullet creation: pos(" << pos.x << "," << pos.y << ") vel("
+        << vel.x << "," << vel.y << ") dir(" << dir << ")" << std::endl;
+
+    // Set up server address
+    addrinfo hints{};
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;        // IPv4
+    hints.ai_socktype = SOCK_DGRAM;   // UDP
+    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+
+    // Get address information for the server
+    addrinfo* result = nullptr;
+    if (getaddrinfo(this->serverIP.c_str(), std::to_string(this->serverPort).c_str(), &hints, &result) != 0) {
+        std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
+        return;
+    }
+
+    // Extract the server address
+    sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
+
+    // Send to the server
+    int sendResult = sendto(this->clientSocket, message.c_str(), message.length(), 0,
+        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
+
+    if (sendResult == SOCKET_ERROR) {
+        std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
+    }
+    else {
+        std::cout << "Sent bullet creation message, bytes: " << sendResult << std::endl;
+    }
+
+    // Send to the server
+    sendto(this->clientSocket, message.c_str(), message.length(), 0,
+        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
+
+    // Clean up
+    freeaddrinfo(result);
+}
+
 /**
  * Clean up resources (sockets, Winsock) on exit
  */

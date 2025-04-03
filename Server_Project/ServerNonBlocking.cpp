@@ -96,6 +96,12 @@ private:
     const float ASTEROID_CREATION_INTERVAL = 2.0f; // Seconds between asteroid creation
     const float ASTEROID_UPDATE_INTERVAL = 0.05f; // Seconds between asteroid updates
 
+    // For bullets management
+    void broadcastBullets(SOCKET socket);
+    void updateBullets();
+    std::chrono::steady_clock::time_point lastBulletUpdate;
+    const float BULLET_LIFETIME = 3.0f; // Seconds until a bullet disappears
+
     // Set up Winsock
     bool setupWinsock();
     // Resolve the server's address
@@ -183,6 +189,8 @@ void Server::run() {
     auto lastTime = std::chrono::steady_clock::now();
     bool gameStarted = false; // Flag to start timer when 4 players are connected
 
+    lastBulletUpdate = std::chrono::steady_clock::now();
+
     // Define the action lambda to handle UDP messages
     auto action = [this](UdpClientData message) {
         handleUdpClient(message); // Handle the UDP message
@@ -246,6 +254,9 @@ void Server::run() {
 
         // Broadcast asteroid data to all clients
         broadcastAsteroids(listenerSocket);
+
+        updateBullets();
+        broadcastBullets(listenerSocket);
 
         // Receive the UDP message from the client
         int bytesReceived = recvfrom(listenerSocket, buffer, sizeof(buffer), 0,
@@ -622,6 +633,34 @@ void Server::handleUdpClient(UdpClientData message)
         return;
     }
 
+    if (messageStr.find("BULLET_CREATE ") == 0) {
+        // Parse the bullet creation message
+        // Format: "BULLET_CREATE posX posY velX velY dir"
+        float x, y, velX, velY, dir;
+        if (sscanf_s(messageStr.c_str() + 14, "%f %f %f %f %f", &x, &y, &velX, &velY, &dir) == 5) {
+            // Generate a unique ID for the bullet
+            std::string bulletID = clientKey + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+
+            // Create new bullet data
+            bulletData bullet;
+            bullet.bulletID = bulletID;
+            bullet.x = x;
+            bullet.y = y;
+            bullet.velX = velX;
+            bullet.velY = velY;
+            bullet.dir = dir;
+            bullet.creationTime = std::chrono::steady_clock::now();
+
+            // Store the bullet
+            bullets[bulletID] = bullet;
+
+            // Debug output
+            std::cout << "Created bullet: " << bulletID << " at (" << x << ", " << y << ")" << std::endl;
+        }
+        return;
+    }
+
+
     // Parse received position and score data - now looking for 4 values instead of 3
     if (sscanf_s(messageData, "%f %f %f %d", &x, &y, &rot, &score) != 4) {
         std::cerr << "Data received invalid: " << messageData << std::endl;
@@ -759,6 +798,80 @@ void Server::sendUserList(SOCKET clientSocket) {
     }
 
     send(clientSocket, message.data(), message.size(), 0); // Send the message to the client
+}
+
+void Server::broadcastBullets(SOCKET socket) {
+    if (bullets.empty()) {
+        return; // Don't send empty data
+    }
+
+    std::string data = "BULLETS";
+
+    // Format: BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...
+    for (const auto& [id, bullet] : bullets) {
+        data += "|" + bullet.bulletID + "," +
+            std::to_string(bullet.x) + "," +
+            std::to_string(bullet.y) + "," +
+            std::to_string(bullet.velX) + "," +
+            std::to_string(bullet.velY) + "," +
+            std::to_string(bullet.dir);
+    }
+
+    // Debug output - only occasionally to avoid spam
+    static int counter = 0;
+    if (++counter % 100 == 0) {
+        std::cout << "Broadcasting " << bullets.size() << " bullets" << std::endl;
+    }
+
+    // Send this data to all clients
+    for (const auto& [_, player] : players) {
+        sendto(socket, data.c_str(), data.size(), 0, (sockaddr*)&player.cAddr, sizeof(player.cAddr));
+    }
+}
+
+
+void Server::updateBullets() {
+    auto now = std::chrono::steady_clock::now();
+    float deltaTime = std::chrono::duration<float>(now - lastBulletUpdate).count();
+
+    // Cap deltaTime to prevent huge jumps
+    if (deltaTime > 0.1f) {
+        deltaTime = 0.1f;
+    }
+
+    // Debug counter
+    static int counter = 0;
+    counter++;
+
+    // Update positions and remove expired bullets
+    int expiredCount = 0;
+    int remainingCount = 0;
+
+    for (auto it = bullets.begin(); it != bullets.end();) {
+        bulletData& bullet = it->second;
+
+        // Update position based on velocity
+        bullet.x += bullet.velX * deltaTime * 60.0f; // Scale by 60 to match game's speed expectations
+        bullet.y += bullet.velY * deltaTime * 60.0f;
+
+        // Check if bullet has existed for too long
+        auto bulletAge = std::chrono::duration<float>(now - bullet.creationTime).count();
+        if (bulletAge > BULLET_LIFETIME) {
+            it = bullets.erase(it);
+            expiredCount++;
+        }
+        else {
+            ++it;
+            remainingCount++;
+        }
+    }
+
+    // Debug output - occasionally to avoid spam
+    if (counter % 100 == 0) {
+        std::cout << "updateBullets: Expired " << expiredCount << ", Remaining " << remainingCount << std::endl;
+    }
+
+    lastBulletUpdate = now;
 }
 
 // Handle server disconnection
