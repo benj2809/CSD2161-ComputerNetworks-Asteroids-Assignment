@@ -27,6 +27,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include <unordered_map>
 #include <mutex>
 #include <vector>
+#include <sstream>
 #include "taskqueue.h"
 #include "playerdata.h"
 
@@ -635,11 +636,18 @@ void Server::handleUdpClient(UdpClientData message)
 
     if (messageStr.find("BULLET_CREATE ") == 0) {
         // Parse the bullet creation message
-        // Format: "BULLET_CREATE posX posY velX velY dir"
+        // Format: "BULLET_CREATE posX posY velX velY dir bulletID"
         float x, y, velX, velY, dir;
-        if (sscanf_s(messageStr.c_str() + 14, "%f %f %f %f %f", &x, &y, &velX, &velY, &dir) == 5) {
-            // Generate a unique ID for the bullet
-            std::string bulletID = clientKey + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+        std::string bulletID;
+
+        // Parse the first 5 values
+        std::istringstream iss(messageStr.substr(14)); // Skip "BULLET_CREATE "
+        if (iss >> x >> y >> velX >> velY >> dir >> bulletID) {
+            // Use the provided bullet ID
+            // If no ID was provided, generate one (this is a fallback)
+            if (bulletID.empty()) {
+                bulletID = clientKey + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+            }
 
             // Create new bullet data
             bulletData bullet;
@@ -655,7 +663,7 @@ void Server::handleUdpClient(UdpClientData message)
             bullets[bulletID] = bullet;
 
             // Debug output
-            std::cout << "Created bullet: " << bulletID << " at (" << x << ", " << y << ")" << std::endl;
+            std::cout << "Server received bullet: " << bulletID << " at (" << x << ", " << y << ")" << std::endl;
         }
         return;
     }

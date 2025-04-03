@@ -428,7 +428,6 @@ void Client::handleNetwork() {
         }
 
         // Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
-// Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
         if (receivedData.find("BULLETS") == 0) {
             lockBullets();
 
@@ -438,7 +437,6 @@ void Client::handleNetwork() {
                 std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
             }
 
-            // REMOVED: Don't clear remote bullets on every update
             // Keep a list of updated bullet IDs to track which ones to keep
             std::unordered_set<std::string> updatedBulletIDs;
             int newBullets = 0;
@@ -467,13 +465,7 @@ void Client::handleNetwork() {
                             // Add this ID to our updated set
                             updatedBulletIDs.insert(id);
 
-                            // Check if this bullet was fired by the local player
-                            std::string playerIDStr = std::to_string(playerID) + "_";
-                            if (id.find(playerIDStr) == 0) {
-                                pos = nextPos;
-                                continue;  // Skip processing this bullet
-                            }
-
+                            // Simply use the bullet ID to track what's already been processed
                             bool isNewBullet = (bullets.find(id) == bullets.end());
 
                             // Get or create bullet data
@@ -519,7 +511,7 @@ void Client::handleNetwork() {
             // Now remove bullets that weren't updated (they've probably expired on the server)
             int removedBullets = 0;
             for (auto it = bullets.begin(); it != bullets.end();) {
-                // Keep local bullets and bullets that were updated
+                // Keep local bullets no matter what, and keep updated remote bullets
                 if (it->second.fromLocalPlayer || updatedBulletIDs.find(it->first) != updatedBulletIDs.end()) {
                     ++it;
                 }
@@ -908,6 +900,7 @@ void Client::processReceivedData(std::vector<uint8_t>& recvQueue) {
 }
 
 void Client::reportAsteroidDestruction(const std::string& asteroidID) {
+    // Create the message to send to server
     std::string message = "DESTROY_ASTEROID|" + asteroidID;
 
     // Set up server address
@@ -963,22 +956,27 @@ void updateAsteroidInterpolation() {
     }
 }
 
-void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir) {
+void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
     if (this->clientSocket == INVALID_SOCKET) {
         std::cerr << "ERROR: Cannot send bullet creation - socket is invalid!" << std::endl;
         return;
     }
 
-    // Format: "BULLET_CREATE posX posY velX velY dir"
+    // Use the provided bulletID or generate a new one
+    std::string finalBulletID = bulletID;
+    if (finalBulletID.empty()) {
+        finalBulletID = std::to_string(playerID) + "_" +
+            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    }
+
+    // Format: "BULLET_CREATE posX posY velX velY dir bulletID"
     std::string message = "BULLET_CREATE " +
         std::to_string(pos.x) + " " +
         std::to_string(pos.y) + " " +
         std::to_string(vel.x) + " " +
         std::to_string(vel.y) + " " +
-        std::to_string(dir);
-
-    std::cout << "Sending bullet creation: pos(" << pos.x << "," << pos.y << ") vel("
-        << vel.x << "," << vel.y << ") dir(" << dir << ")" << std::endl;
+        std::to_string(dir) + " " +
+        finalBulletID;  // Include bullet ID in message
 
     // Set up server address
     addrinfo hints{};
@@ -1005,12 +1003,8 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
         std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
     }
     else {
-        std::cout << "Sent bullet creation message, bytes: " << sendResult << std::endl;
+        std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
     }
-
-    // Send to the server
-    sendto(this->clientSocket, message.c_str(), message.length(), 0,
-        reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
 
     // Clean up
     freeaddrinfo(result);

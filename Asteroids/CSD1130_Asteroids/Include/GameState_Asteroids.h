@@ -56,6 +56,7 @@ void renderNetworkBullets();
 // Asteroid
 void renderServerAsteroids();
 void updateAsteroidInterpolation();
+void checkBulletAsteroidCollisions();
 //
 
 void syncPlayers(std::unordered_map<int, playerData>& pData);

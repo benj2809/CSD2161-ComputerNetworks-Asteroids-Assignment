@@ -7,26 +7,11 @@ C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Astero
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(134,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,48): warning C4458: declaration of 'serverIP' hides class member
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,67): warning C4458: declaration of 'serverPort' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(931,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(1001,80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(1012,63): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-  Collision.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  GameStateMgr.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  GameState_Asteroids.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(395,8): warning C4189: 'dt': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1042,22): warning C4189: 'id': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1089,63): warning C4459: declaration of 'players' hides global declaration
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1119,7): warning C4189: 'color': local variable is initialized but not referenced
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(924,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(999,80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
   Main.cpp
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
   Generating Code...
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp(120,1): warning C4715: 'WinMain': not all control paths return a value
-  LINK : C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\\Bin\CSD1130_AsteroidsD.exe not found or not built by the last incremental link; performing full link
   CSD1130_Asteroids.vcxproj -> C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
