@@ -100,7 +100,7 @@ private:
     void broadcastBullets(SOCKET socket);
     void updateBullets();
     std::chrono::steady_clock::time_point lastBulletUpdate;
-    const float BULLET_LIFETIME = 3.0f; // Seconds until a bullet disappears
+    const float BULLET_LIFETIME = 2.5f; // Seconds until a bullet disappears
 
     // Set up Winsock
     bool setupWinsock();
@@ -851,8 +851,8 @@ void Server::updateBullets() {
         bulletData& bullet = it->second;
 
         // Update position based on velocity
-        bullet.x += bullet.velX * deltaTime * 60.0f; // Scale by 60 to match game's speed expectations
-        bullet.y += bullet.velY * deltaTime * 60.0f;
+        bullet.x += bullet.velX * deltaTime;
+        bullet.y += bullet.velY * deltaTime;
 
         // Check if bullet has existed for too long
         auto bulletAge = std::chrono::duration<float>(now - bullet.creationTime).count();
