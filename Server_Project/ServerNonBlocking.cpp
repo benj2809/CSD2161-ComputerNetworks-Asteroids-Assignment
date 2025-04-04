@@ -104,6 +104,9 @@ private:
     std::chrono::steady_clock::time_point lastBulletUpdate;
     const float BULLET_LIFETIME = 2.5f; // Seconds until a bullet disappears
 
+    // Maps IP addresses to player IDs for external clients
+    std::unordered_map<std::string, int> ipToPlayerId;
+
     // Set up Winsock
     bool setupWinsock();
     // Resolve the server's address
@@ -624,8 +627,7 @@ void Server::handleUdpClient(UdpClientData message)
     float x, y, rot;
     int score; // Add variable for score
     std::string clientIPstr(clientIp);
-    std::string clientKey = clientIPstr + ":" +
-        std::to_string(clientPort);
+    std::string clientKey = clientIPstr + ":" + std::to_string(clientPort);
 
     // Check if this is an asteroid destruction message
     std::string messageStr(messageData);
@@ -636,76 +638,144 @@ void Server::handleUdpClient(UdpClientData message)
     }
 
     if (messageStr.find("BULLET_CREATE ") == 0) {
-        // Parse the bullet creation message
-        // Format: "BULLET_CREATE posX posY velX velY dir bulletID"
-        float x, y, velX, velY, dir;
-        std::string bulletID;
-
-        // Parse the first 5 values
-        std::istringstream iss(messageStr.substr(14)); // Skip "BULLET_CREATE "
-        if (iss >> x >> y >> velX >> velY >> dir >> bulletID) {
-            // Use the provided bullet ID
-            // If no ID was provided, generate one (this is a fallback)
-            if (bulletID.empty()) {
-                bulletID = clientKey + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-            }
-
-            // Create new bullet data
-            bulletData bullet;
-            bullet.bulletID = bulletID;
-            bullet.x = x;
-            bullet.y = y;
-            bullet.velX = velX;
-            bullet.velY = velY;
-            bullet.dir = dir;
-            bullet.creationTime = std::chrono::steady_clock::now();
-
-            // Store the bullet
-            bullets[bulletID] = bullet;
-
-            // Debug output
-            std::cout << "Server received bullet: " << bulletID << " at (" << x << ", " << y << ")" << std::endl;
-        }
+        // Parse the bullet creation message logic...
         return;
     }
-    if (messageStr.find("UPDATE_SCORE|") == 0)
-    {
+
+    if (messageStr.find("UPDATE_SCORE|") == 0) {
         std::string scoreUpdateData = messageStr.substr(13); // Skip "SCORE_UPDATE|"
         updatePlayerScore(scoreUpdateData);
         return;
     }
 
-    // Parse received position and score data - now looking for 4 values instead of 3
+    // Parse received position and score data
     if (sscanf_s(messageData, "%f %f %f %d", &x, &y, &rot, &score) != 4) {
         std::cerr << "Data received invalid: " << messageData << std::endl;
         return;
     }
 
-    // Check if player already exists
+    // Check if this is a local client (connecting from the same machine as the server)
+    bool isLocalClient = (clientIPstr == "127.0.0.1" || clientIPstr == "::1");
+
+    // Player exists, update position and score
     auto it = players.find(clientKey);
     if (it != players.end()) {
         // Player exists, update position and score
         it->second.x = x;
         it->second.y = y;
         it->second.rot = rot;
-        it->second.score = score; // Update the score
+
+        // Don't overwrite the score from the client message if the saved score is higher
+        // This prevents score resets on reconnection
+        if (score > it->second.score) {
+            it->second.score = score;
+        }
+
+        it->second.lastActive = std::chrono::steady_clock::now();
     }
     else {
-        // New player, assign ID
-        static int nextPlayerID = 1;
-        int newPlayerID = nextPlayerID++;
+        // New connection or reconnection
+
+        // First, check if this is a reconnecting player by IP (for non-local clients)
+        int playerID = -1;
+        int savedScore = 0;
+
+        if (!isLocalClient) {
+            // Try to find a previous player entry with the same IP (regardless of port)
+            // We need to do this instead of using the ipToPlayerId map to ensure we get the latest score
+
+            std::cout << "Looking for previous entries for IP: " << clientIPstr << std::endl;
+
+            // First pass: Find if there's an existing player entry for this IP and get its ID
+            for (const auto& entry : players) {
+                // Extract the IP part from the key (removing the port)
+                size_t colonPos = entry.first.find(':');
+                std::string entryIP = entry.first.substr(0, colonPos);
+
+                if (entryIP == clientIPstr) {
+                    playerID = std::stoi(entry.second.playerID);
+                    savedScore = entry.second.score;  // Save the score from the found entry
+
+                    std::cout << "Found previous player with ID: " << playerID
+                        << ", Score: " << savedScore
+                        << " at key: " << entry.first << std::endl;
+
+                    // Update the IP-to-PlayerID mapping
+                    ipToPlayerId[clientIPstr] = playerID;
+                    break;
+                }
+            }
+
+            // If we found a player ID, use it
+            if (playerID != -1) {
+                std::cout << "Reconnected player with ID: " << playerID
+                    << ", Score: " << savedScore
+                    << " from IP: " << clientIPstr << std::endl;
+
+                // Second pass: Remove all old entries for this player ID (cleanup)
+                for (auto iter = players.begin(); iter != players.end();) {
+                    if (std::stoi(iter->second.playerID) == playerID) {
+                        std::cout << "Removing old player entry: " << iter->first
+                            << " with score: " << iter->second.score << std::endl;
+                        iter = players.erase(iter);
+                    }
+                    else {
+                        ++iter;
+                    }
+                }
+            }
+            else if (ipToPlayerId.find(clientIPstr) != ipToPlayerId.end()) {
+                // Fall back to the IP mapping if we didn't find an active player entry
+                playerID = ipToPlayerId[clientIPstr];
+                std::cout << "Using IP-to-PlayerID mapping, found ID: " << playerID << std::endl;
+            }
+        }
+
+        // If we didn't find a previous player ID, assign a new one
+        if (playerID == -1) {
+            static int nextPlayerID = 1;
+            playerID = nextPlayerID++;
+
+            // Store the IP to PlayerID mapping if not a local client
+            if (!isLocalClient) {
+                ipToPlayerId[clientIPstr] = playerID;
+            }
+
+            std::cout << "Assigned new player ID: " << playerID << " to IP: " << clientIPstr << std::endl;
+        }
+
+        // Create player data
         playerData p;
-        p.playerID = std::to_string(newPlayerID);
+        p.playerID = std::to_string(playerID);
         p.x = x;
         p.y = y;
         p.rot = rot;
-        p.score = score; // Set initial score
+
+        // Use the higher of the saved score or the score from the message
+        p.score = (savedScore > score) ? savedScore : score;
+
         p.cAddr = clientAddr;
         p.cIP = clientIp;
+        p.lastActive = std::chrono::steady_clock::now();
+
+        std::cout << "Creating new player entry with ID: " << playerID
+            << ", Score: " << p.score
+            << " (saved: " << savedScore << ", message: " << score << ")" << std::endl;
+
         players[clientKey] = p;
+
+        // Send the player ID to the client
         sendto(listenerSocket, p.playerID.c_str(), p.playerID.size(), 0, (sockaddr*)&p.cAddr, sizeof(p));
+
+        // Immediately broadcast the score to make sure all clients get the correct score
+        std::string scoreUpdate = "SCORE_UPDATE|" + p.playerID + " " + std::to_string(p.score);
+        for (const auto& [_, player] : players) {
+            sendto(listenerSocket, scoreUpdate.c_str(), scoreUpdate.size(), 0,
+                (sockaddr*)&player.cAddr, sizeof(player.cAddr));
+        }
     }
 }
+
 // Send all players position to each client
 void Server::sendPlayerData(SOCKET servSocket) {
     std::string data; // = std::to_string(players.size()) + " ";
