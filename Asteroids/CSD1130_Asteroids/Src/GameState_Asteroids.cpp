@@ -514,7 +514,7 @@ void GameStateAsteroidsUpdate(void)
 						std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 
 					// Add to local bullet list
-					pBullets.push_back(bullet);
+					// pBullets.push_back(bullet);
 
 					// Add to global bullets map with fromLocalPlayer flag to avoid duplication
 					Client::lockBullets();
