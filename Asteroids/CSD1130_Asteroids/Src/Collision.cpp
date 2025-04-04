@@ -1,25 +1,33 @@
-/******************************************************************************/
+/* Start Header
+*******************************************************************/
 /*!
-\file		Collision.cpp
-\author		Ong Jun Han Benjamin, o.junhanbenjamin, 2301532
-\par		o.junhanbenjamin\@digipen.edu
-\date		Feb 08, 2024
-\brief		This file contains the definition of the function CollisionIntersection_RectRect. The function used to check for collision between two objects.
+\file Collision.cpp
+\co author Ho Jing Rui
+\co author Saminathan Aaron Nicholas
+\co author Jay Lim Jun Xiang
+\par emails: jingrui.ho@digipen.edu
+\	         s.aaronnicholas@digipen.edu
+\	         jayjunxiang.lim@digipen.edu
+\date 28 March, 2025
+\brief Copyright (C) 2025 DigiPen Institute of Technology.
 
-Copyright (C) 20xx DigiPen Institute of Technology.
 Reproduction or disclosure of this file or its contents without the
 prior written consent of DigiPen Institute of Technology is prohibited.
- */
-/******************************************************************************/
+*/
+/* End Header
+*******************************************************************/
 
 #include "main.h"
 
 /**************************************************************************/
 /*!
-	Collision function called to check collision between two instances.
-	Compares the min & max x/y coordinates of both instances with each other.
-	Should either instances min & max x/y coordinates fall between the other instances x/y coordinates, a collision is detected and will return true,
-	else return false.
+    AABB collision to detect overlaps of min and max x and y values of each object
+    In
+        - aabb1: min and max x and y values for 1st object
+        - vel1: velocity of 1st object
+        - aabb2: min and max x and y values for 2nd object
+        - vel2: velocity of 2nd object
+        - firstTimeOfCollision: no collision is less than this
 */
 /**************************************************************************/
 bool CollisionIntersection_RectRect(const AABB& aabb1,          //Input

@@ -133,7 +133,7 @@
     <ClInclude Include="taskqueue.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ServerNonBlocking.cpp" />
+    <ClCompile Include="Server.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -2,34 +2,57 @@
 
 #include <unordered_map>
 #include <string>
+#include <chrono>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-struct playerData {
-	std::string playerID;
-	float x, y, rot;		// Position
-	sockaddr_in cAddr;
-	int score;
-	std::string cIP; // Client IP as a string
-	std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
+/**
+ * @struct PlayerData
+ * @brief Contains all data related to a connected player
+ */
+struct PlayerData {
+    std::string id;         // Unique player identifier
+    float positionX;        // X coordinate in game world
+    float positionY;        // Y coordinate in game world
+    float rotation;         // Player's rotation angle
+    sockaddr_in clientAddress; // Network address information
+    int score;              // Player's current score
+    std::string ipAddress;  // Client's IP address as string
+    std::chrono::steady_clock::time_point lastActivityTime; // Last time player was active
 };
 
-struct bulletData {
-	std::string bulletID;
-	float x, y;              // Position
-	float velX, velY;        // Velocity
-	float dir;               // Direction
-	std::chrono::steady_clock::time_point creationTime; // When the bullet was created
+/**
+ * @struct BulletData
+ * @brief Contains data for active bullets in the game
+ */
+struct BulletData {
+    std::string id;         // Unique bullet identifier
+    float positionX;        // X coordinate in game world
+    float positionY;        // Y coordinate in game world
+    float velocityX;        // X velocity component
+    float velocityY;        // Y velocity component
+    float direction;        // Direction of movement
+    std::chrono::steady_clock::time_point creationTime; // When bullet was fired
 };
 
-struct asteroidData {
-	std::string asteroidID;
-	float x, y;              // Position
-	float velX, velY;        // Velocity
-	float scaleX, scaleY;    // Scale
-	bool active;             // Whether the asteroid is active
-	std::chrono::steady_clock::time_point creationTime; // When the asteroid was created
+/**
+ * @struct AsteroidData
+ * @brief Contains data for asteroids in the game
+ */
+struct AsteroidData {
+    std::string id;         // Unique asteroid identifier
+    float positionX;        // X coordinate in game world
+    float positionY;        // Y coordinate in game world
+    float velocityX;        // X velocity component
+    float velocityY;        // Y velocity component
+    float scaleX;           // Horizontal scale/size
+    float scaleY;           // Vertical scale/size
+    bool isActive;          // Whether asteroid is active/destroyed
+    std::chrono::steady_clock::time_point creationTime; // When asteroid was created
 };
 
-std::unordered_map<std::string, playerData> players;
-std::unordered_map<std::string, bulletData> bullets;
-std::unordered_map<std::string, asteroidData> asteroids;
-std::mutex asteroidsMutex; // For thread-safe access
+// Global game state containers
+extern std::unordered_map<std::string, PlayerData> players;
+extern std::unordered_map<std::string, BulletData> bullets;
+extern std::unordered_map<std::string, AsteroidData> asteroids;
+extern std::mutex asteroidsMutex; // Protects access to asteroids

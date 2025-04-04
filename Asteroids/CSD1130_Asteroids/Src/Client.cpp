@@ -1,3 +1,22 @@
+/* Start Header
+*******************************************************************/
+/*!
+\file Client.cpp
+\co author Ho Jing Rui
+\co author Saminathan Aaron Nicholas
+\co author Jay Lim Jun Xiang
+\par emails: jingrui.ho@digipen.edu
+\	         s.aaronnicholas@digipen.edu
+\	         jayjunxiang.lim@digipen.edu
+\date 28 March, 2025
+\brief Copyright (C) 2025 DigiPen Institute of Technology.
+
+Reproduction or disclosure of this file or its contents without the
+prior written consent of DigiPen Institute of Technology is prohibited.
+*/
+/* End Header
+*******************************************************************/
+
 #include "Client.h"
 #include "AEEngine.h"
 #include "GameState_Asteroids.h"

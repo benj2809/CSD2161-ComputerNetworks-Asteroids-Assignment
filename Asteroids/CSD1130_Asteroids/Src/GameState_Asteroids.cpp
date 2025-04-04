@@ -1,27 +1,21 @@
-/******************************************************************************/
+/* Start Header
+*******************************************************************/
 /*!
-\file		GameState_Asteroids.cpp
-\author		Ong Jun Han Benjamin, o.junhanbenjamin, 2301532
-\par		o.junhanbenjamin\@digipen.edu
-\date		Feb 08, 2024
-\brief		This file contains the functions:	- GameStateAsteroidsLoad;
-												- GameStateAsteroidsInit;
-												- GameStateAsteroidsUpdate;
-												- GameStateAsteroidsDraw;
-												- GameStateAsteroidsFree;
-												- GameStateAsteroidsUnload;
-												- gameObjInstCreate;
-												- gameObjInstDestroy;
-												- Helper_Wall_Collision;
+\file GameState_Asteroids.cpp
+\co author Ho Jing Rui
+\co author Saminathan Aaron Nicholas
+\co author Jay Lim Jun Xiang
+\par emails: jingrui.ho@digipen.edu
+\	         s.aaronnicholas@digipen.edu
+\	         jayjunxiang.lim@digipen.edu
+\date 28 March, 2025
+\brief Copyright (C) 2025 DigiPen Institute of Technology.
 
-			Each of the functions mentioned above contains blocks of code for movement and collision etc.
-			More documentation are provided below.
-
-Copyright (C) 20xx DigiPen Institute of Technology.
 Reproduction or disclosure of this file or its contents without the
 prior written consent of DigiPen Institute of Technology is prohibited.
- */
- /******************************************************************************/
+*/
+/* End Header
+*******************************************************************/
 
 #include "main.h"
 #include <iostream>
