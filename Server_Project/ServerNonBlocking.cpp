@@ -258,6 +258,16 @@ void Server::run() {
         broadcastAsteroids(listenerSocket);
 
         updateBullets();
+
+        if (!bullets.empty()) {
+            for (auto bullet : bullets) {
+                std::cout << "Bullet ID: " << bullet.first << std::endl;
+            }
+        }
+        else {
+            std::cout << "Bullet storage is empty!" << std::endl;
+        }
+
         broadcastBullets(listenerSocket);
 
         // Receive the UDP message from the client
