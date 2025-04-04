@@ -268,12 +268,27 @@ void GameStateAsteroidsLoad(void)
 /******************************************************************************/
 void GameStateAsteroidsInit(void)
 {
+	// Clear any existing player ships from previous sessions
+	for (auto it = pShips.begin(); it != pShips.end(); ++it) {
+		if (it->second) {
+			gameObjInstDestroy(it->second);
+		}
+	}
+	pShips.clear();
+
+	// Clear any bullets from previous sessions
+	for (auto it = pBullets.begin(); it != pBullets.end(); ++it) {
+		if (*it) {
+			gameObjInstDestroy(*it);
+		}
+	}
+	pBullets.clear();
+
 	// create the main ship
 	AEVec2 scale;
 	AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
 	spShip = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
 	AE_ASSERT(spShip);
-	AEVec2 pos{}, vel{};
 
 	// reset the score and the number of ships
 	sScore = 0;
@@ -709,6 +724,19 @@ void GameStateAsteroidsUpdate(void)
 	checkBulletAsteroidCollisions();
 
 	syncPlayers(players);
+
+	// Make sure our local player's ship is properly tracked
+	for (const auto& pair : players) {
+		if (pair.second.playerID == Client::getPlayerID()) {
+			// Update our local position reference but keep using spShip for local control
+			finalPlayerPosition = { spShip->posCurr.x, spShip->posCurr.y };
+			playerRotate = spShip->dirCurr;
+
+			// Get the current score from the server data
+			Playerscore = pair.second.score;
+			break;
+		}
+	}
 }
 
 /******************************************************************************/
@@ -1110,10 +1138,34 @@ void Helper_Wall_Collision()
 
 // Sync players
 void syncPlayers(std::unordered_map<int, playerData>& pData) {
+	// Clean up any player ships that aren't in the current player data
+	for (auto it = pShips.begin(); it != pShips.end();) {
+		if (pData.find(it->first) == pData.end()) {
+			// Player no longer exists in the data, destroy their ship and remove from the map
+			if (it->second) {
+				gameObjInstDestroy(it->second);
+			}
+			it = pShips.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
 	for (const auto& pair : pData) {
+		// Skip our own player ID - we'll handle our own ship separately
 		if (pair.second.playerID == Client::getPlayerID()) {
+			// If we somehow have our own player ID in pShips, remove it
+			auto it = pShips.find(pair.first);
+			if (it != pShips.end()) {
+				if (it->second) {
+					gameObjInstDestroy(it->second);
+				}
+				pShips.erase(it);
+			}
 			continue;
 		}
+
 		// If player does not have a ship, create one
 		if (pShips.find(pair.first) == pShips.end()) {
 			AEVec2 scale;
@@ -1124,15 +1176,11 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 		}
 		else {
 			// Update existing ship position
-
 			AEVec2 position;
 			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
 			pShips[pair.first]->posCurr = position;
 			pShips[pair.first]->dirCurr = pair.second.rot;
-			//std::cout << pShips[pair.first]->posCurr.x << " " << pShips[pair.first]->posCurr.y << std::endl;		
-
 		}
-		//std::cout << pair.first << " " << pair.second.playerID << " " << pair.second.x << " " << pair.second.y << std::endl;
 	}
 }
 
