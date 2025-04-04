@@ -881,9 +881,9 @@ void Server::updateBullets() {
     }
 
     // Debug output - occasionally to avoid spam
-    if (counter % 100 == 0) {
-        std::cout << "updateBullets: Expired " << expiredCount << ", Remaining " << remainingCount << std::endl;
-    }
+    //if (counter % 100 == 0) {
+    //    std::cout << "updateBullets: Expired " << expiredCount << ", Remaining " << remainingCount << std::endl;
+    //}
 
     lastBulletUpdate = now;
 }

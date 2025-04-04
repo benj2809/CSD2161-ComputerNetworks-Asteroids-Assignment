@@ -1,1 +1,11 @@
-﻿
+﻿  GameState_Asteroids.cpp
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(335,8): warning C4189: 'dt': local variable is initialized but not referenced
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(722,7): warning C4101: 'strBuffer': unreferenced local variable
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1184,22): warning C4189: 'id': local variable is initialized but not referenced
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1231,63): warning C4459: declaration of 'players' hides global declaration
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1261,7): warning C4189: 'color': local variable is initialized but not referenced
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1268,46): warning C4100: 'score': unreferenced formal parameter
+C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1268,32): warning C4100: 'playerID': unreferenced formal parameter
+  CSD1130_Asteroids.vcxproj -> C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
