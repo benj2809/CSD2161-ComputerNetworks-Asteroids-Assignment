@@ -434,7 +434,7 @@ void Client::handleNetwork() {
             // Debug output - occasionally to avoid spam
             static int counter = 0;
             if (++counter % 100 == 0) {
-                std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
+                //std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
             }
 
             // Keep a list of updated bullet IDs to track which ones to keep
@@ -523,9 +523,9 @@ void Client::handleNetwork() {
 
             // Debug output - occasionally to avoid spam
             if (counter % 100 == 0) {
-                std::cout << "Bullets: " << newBullets << " new, "
-                    << updatedBullets << " updated, "
-                    << removedBullets << " removed" << std::endl;
+                //std::cout << "Bullets: " << newBullets << " new, "
+                //    << updatedBullets << " updated, "
+                //    << removedBullets << " removed" << std::endl;
             }
 
             unlockBullets();
@@ -535,7 +535,7 @@ void Client::handleNetwork() {
 		if (receivedData.find("SCORE_UPDATE") == 0)
 		{
             //print message.
-			std::cout << "Received SCORE_UPDATE message: " << receivedData << std::endl;
+			//std::cout << "Received SCORE_UPDATE message: " << receivedData << std::endl;
             // Skip the "SCORE_UPDATE|" prefix
 			size_t pos = receivedData.find('|');
 			if (pos != std::string::npos) {
@@ -1031,7 +1031,7 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
     // Get address information for the server
     addrinfo* result = nullptr;
     if (getaddrinfo(this->serverIP.c_str(), std::to_string(this->serverPort).c_str(), &hints, &result) != 0) {
-        std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
+        //std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
         return;
     }
 
@@ -1043,10 +1043,10 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
         reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
 
     if (sendResult == SOCKET_ERROR) {
-        std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
+        //std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
     }
     else {
-        std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
+        //std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
     }
 
     // Clean up

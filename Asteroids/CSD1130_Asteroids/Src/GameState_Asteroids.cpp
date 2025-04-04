@@ -275,37 +275,6 @@ void GameStateAsteroidsInit(void)
 	AE_ASSERT(spShip);
 	AEVec2 pos{}, vel{};
 
-	////Asteroid 1
-	//pos.x = 90.0f;		pos.y = -220.0f;
-	//vel.x = -60.0f;		vel.y = -30.0f;
-	//AEVec2Set(&scale, ASTEROID_MIN_SCALE_X, ASTEROID_MAX_SCALE_Y);
-	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
-
-	////Asteroid 2
-	//pos.x = -260.0f;	pos.y = -250.0f;
-	//vel.x = 39.0f;		vel.y = -130.0f;
-	//AEVec2Set(&scale, ASTEROID_MAX_SCALE_X, ASTEROID_MIN_SCALE_Y);
-	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
-
-	////Asteroid 3
-	//pos.x = -200.0f;	pos.y = -150.0f;
-	//vel.x = 40.0f;		vel.y = -200.0f;
-	//AEVec2Set(&scale, ASTEROID_MAX_SCALE_X / 2.f, ASTEROID_MIN_SCALE_Y / 2.f);
-	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
-
-	////Asteroid 4
-	//pos.x = 300.0f;		pos.y = -115.0f;
-	//vel.x = -25.0f;		vel.y = -100.0f;
-	//AEVec2Set(&scale, ASTEROID_MIN_SCALE_X / 2.f, ASTEROID_MAX_SCALE_Y / 2.f);
-	//gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
-
-	//// create the static wall
-	//AEVec2Set(&scale, WALL_SCALE_X, WALL_SCALE_Y);
-	//AEVec2 position{};
-	//AEVec2Set(&position, 300.0f, 150.0f);
-	//spWall = gameObjInstCreate(TYPE_WALL, &scale, &position, nullptr, 0.0f);
-	//AE_ASSERT(spWall);
-
 	// reset the score and the number of ships
 	sScore = 0;
 	sShipLives = SHIP_INITIAL_NUM;
@@ -333,6 +302,13 @@ void GameStateAsteroidsUpdate(void)
 			previousScores[id] = currentScore;
 			scoresChanged = true;
 		}
+
+		// Check if any player has reached 1000 points (new game over condition)
+		if (currentScore >= 1000 && !gameOver) {
+			gameOver = true;
+			std::cout << "\n=== GAME OVER ===\n";
+			std::cout << "Player " << id << " has reached 1000 points!" << std::endl;
+		}
 	}
 
 	// Also check if the number of players changed
@@ -355,55 +331,8 @@ void GameStateAsteroidsUpdate(void)
 		}
 	}
 
-	// =========================================================
-	// Update according to input.
-	// Movement input is updated only when the game is active.
-	// Game is active only when the max score (5000) has not been achieved yet,
-	// or when there are still remaining ship lives.
-	// =========================================================
-
-	// This input handling moves the ship without any velocity nor acceleration
-	// It should be changed when implementing the Asteroids project
-	//
-	// Updating the velocity and position according to acceleration is 
-	// done by using the following:
-	// Pos1 = 1/2 * a*t*t + v0*t + Pos0
-	//
-	// In our case we need to divide the previous equation into two parts in order 
-	// to have control over the velocity and that is done by:
-	//
-	// v1 = a*t + v0		//This is done when the UP or DOWN key is pressed 
-	// Pos1 = v1*t + Pos0
-
-	//playerCount = Client::getPlayerCount();
-
-	// Debug
-
-
-	//for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) {
-	//	GameObjInst* pInst = sGameObjInstList + i;
-	//	// skip non-active object
-	//	if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip...
-	//		continue;
-
-	//	if (pInst) {
-	//		std::cout << pInst->pObject->type << std::endl;
-	//	}
-	//}
-
 	// Calculate delta time
 	float dt = (float)AEFrameRateControllerGetFrameTime();
-
-	// Update the game timer if the game is still running
-	if (!gameOver)
-	{
-		if (playerData::gameTimer <= 0.0f)
-		{
-			gameOver = true;
-			playerData::gameTimer = 0.0f;  // Clamp timer to zero
-			// For multiplayer, determine the winner here if needed.
-		}
-	}
 
 	// If the game is over, you might want to return early to skip further game logic
 	if (gameOver && !winnerAnnounced) {
@@ -485,7 +414,7 @@ void GameStateAsteroidsUpdate(void)
 				spaceDebounce = true; // Set debounce flag to prevent multiple bullets
 
 				// Log to track bullet creation for debugging
-				std::cout << "Creating bullet from spacebar press" << std::endl;
+				//std::cout << "Creating bullet from spacebar press" << std::endl;
 
 				// Create a bullet in the direction the ship is facing
 				AEVec2 bulletDir;
@@ -532,7 +461,7 @@ void GameStateAsteroidsUpdate(void)
 					// Report to server
 					g_client.reportBulletCreation(bulletPos, bulletVel, spShip->dirCurr, bulletID);
 
-					std::cout << "Created local bullet with ID: " << bulletID << std::endl;
+					//std::cout << "Created local bullet with ID: " << bulletID << std::endl;
 				}
 			}
 			else if (!AEInputCheckCurr(AEVK_SPACE)) {
@@ -788,7 +717,6 @@ void GameStateAsteroidsUpdate(void)
 	Namely the ship, bullets, asteroids and the static wall.
 */
 /******************************************************************************/
-
 void GameStateAsteroidsDraw(void)
 {
 	char strBuffer[1024]; // To store the score and ship lives to print the user whenever there is an update to either values.
@@ -820,25 +748,11 @@ void GameStateAsteroidsDraw(void)
 	renderServerAsteroids();
 	renderNetworkBullets();
 
-	//for (std::pair<const int, GameObjInst*>& pair : pShips)
-	//{
-	//	GameObjInst* ship = pair.second; // Get ship instance
-
-	//	if (ship && (ship->flag & FLAG_ACTIVE))
-	//	{
-	//		AEGfxSetTransform(ship->transform.m);
-	//		AEGfxMeshDraw(ship->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
-	//	}
-	//}
-
 	// Displaying ship lives and score values to user should there be an update to either values.
 	if (onValueChange)
 	{
+		//sprintf_s(strBuffer, "Ship Left: %d", sShipLives >= 0 ? sShipLives : 0);
 		//printf("%s \n", strBuffer);
-
-		sprintf_s(strBuffer, "Ship Left: %d", sShipLives >= 0 ? sShipLives : 0);
-		//AEGfxPrint(600, 10, (u32)-1, strBuffer);
-		printf("%s \n", strBuffer);
 		onValueChange = false;
 		// display the game over message
 		if (sShipLives < 0)
@@ -850,29 +764,29 @@ void GameStateAsteroidsDraw(void)
 		}
 	}
 
-	// if uw to print the score at the top right
-	/*sprintf_s(strBuffer, "Score: %d", sScore);
-	AEGfxPrint(fontId, strBuffer, 0.4f, 0.9f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);*/
-
-	// Display the remaining time on screen
-	sprintf_s(strBuffer, "Time Left: %.1f", playerData::gameTimer);
-	AEGfxPrint(fontId, strBuffer, -0.9f, 0.9f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
-
+	// Display GAME OVER on screen when the game is over
 	if (gameOver)
 	{
-		//printf("       GAME OVER       \n");
+		// Draw a large red "GAME OVER" text in the center of the screen
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+		AEGfxTextureSet(NULL, 0, 0);
+		AEGfxSetTransparency(1.0f);
+
+		// Red color: RGB(1.0, 0.0, 0.0)
+		AEGfxPrint(fontId, "GAME OVER", -0.2f, 0.0f, 2.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
+
+	// Don't display timer anymore - removed timer display
 
 	RenderPlayerNames(players);
 
 	for (auto p : players)
 	{
 		int id = p.first;
-
 		DisplayScores(players, id);
 	}
 }
-
 /******************************************************************************/
 /*!
 	Function to free all instances, essentially 'killing' them.
@@ -958,8 +872,8 @@ void checkBulletAsteroidCollisions() {
 				tFirst)) {
 
 				// Collision detected!
-				std::cout << "Collision detected between bullet " << bulletPair.first
-					<< " and asteroid " << asteroidPair.first << std::endl;
+				//std::cout << "Collision detected between bullet " << bulletPair.first
+				//	<< " and asteroid " << asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
 				g_client.reportAsteroidDestruction(asteroidPair.first);
@@ -1010,8 +924,8 @@ void checkBulletAsteroidCollisions() {
 				tFirst)) {
 
 				// Collision detected!
-				std::cout << "Collision detected between local bullet and asteroid "
-					<< asteroidPair.first << std::endl;
+				//std::cout << "Collision detected between local bullet and asteroid "
+				//	<< asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
 				g_client.reportAsteroidDestruction(asteroidPair.first);
@@ -1026,7 +940,7 @@ void checkBulletAsteroidCollisions() {
 					// Convert the port number from network byte order to host byte order
 					uint16_t port = ntohs(addr.sin_port);
 					port_out = port;
-					std::cout << "Port number: " << port << std::endl;
+					//std::cout << "Port number: " << port << std::endl;
 				}
 				else {
 					std::cerr << "Failed to get socket name" << std::endl;
