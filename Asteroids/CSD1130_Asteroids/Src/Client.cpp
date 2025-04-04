@@ -465,13 +465,18 @@ void Client::handleNetwork() {
                             // Add this ID to our updated set
                             updatedBulletIDs.insert(id);
 
-                            // Simply use the bullet ID to track what's already been processed
+                            // Check if bullet exists in our map
                             bool isNewBullet = (bullets.find(id) == bullets.end());
 
                             // Get or create bullet data
                             bulletData& bullet = bullets[id];
                             bullet.bulletID = id;
-                            bullet.fromLocalPlayer = false;
+
+                            // Only set this flag for newly created bullets
+                            // This is important - do not change fromLocalPlayer flag for existing bullets
+                            if (isNewBullet) {
+                                bullet.fromLocalPlayer = false;
+                            }
 
                             // Parse position X
                             if (std::getline(iss, value, ',')) {
@@ -525,7 +530,8 @@ void Client::handleNetwork() {
             if (counter % 100 == 0) {
                 std::cout << "Bullets: " << newBullets << " new, "
                     << updatedBullets << " updated, "
-                    << removedBullets << " removed" << std::endl;
+                    << removedBullets << " removed, "
+                    << "Total: " << bullets.size() << std::endl;
             }
 
             unlockBullets();
@@ -535,7 +541,7 @@ void Client::handleNetwork() {
 		if (receivedData.find("SCORE_UPDATE") == 0)
 		{
             //print message.
-			std::cout << "Received SCORE_UPDATE message: " << receivedData << std::endl;
+			//std::cout << "Received SCORE_UPDATE message: " << receivedData << std::endl;
             // Skip the "SCORE_UPDATE|" prefix
 			size_t pos = receivedData.find('|');
 			if (pos != std::string::npos) {
@@ -694,6 +700,7 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
         std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
     }
     else {
+        // Debug output
         std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
     }
 
