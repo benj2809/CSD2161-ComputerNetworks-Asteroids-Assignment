@@ -428,13 +428,14 @@ void Client::handleNetwork() {
         }
 
         // Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
+// Check if this is bullet data (format: "BULLETS|id1,x1,y1,velX1,velY1,dir1|id2,...")
         if (receivedData.find("BULLETS") == 0) {
             lockBullets();
 
             // Debug output - occasionally to avoid spam
             static int counter = 0;
             if (++counter % 100 == 0) {
-                //std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
+                std::cout << "Received BULLETS message, length: " << receivedData.length() << std::endl;
             }
 
             // Keep a list of updated bullet IDs to track which ones to keep
@@ -465,13 +466,18 @@ void Client::handleNetwork() {
                             // Add this ID to our updated set
                             updatedBulletIDs.insert(id);
 
-                            // Simply use the bullet ID to track what's already been processed
+                            // Check if bullet exists in our map
                             bool isNewBullet = (bullets.find(id) == bullets.end());
 
                             // Get or create bullet data
                             bulletData& bullet = bullets[id];
                             bullet.bulletID = id;
-                            bullet.fromLocalPlayer = false;
+
+                            // Only set this flag for newly created bullets
+                            // This is important - do not change fromLocalPlayer flag for existing bullets
+                            if (isNewBullet) {
+                                bullet.fromLocalPlayer = false;
+                            }
 
                             // Parse position X
                             if (std::getline(iss, value, ',')) {
@@ -523,14 +529,16 @@ void Client::handleNetwork() {
 
             // Debug output - occasionally to avoid spam
             if (counter % 100 == 0) {
-                //std::cout << "Bullets: " << newBullets << " new, "
-                //    << updatedBullets << " updated, "
-                //    << removedBullets << " removed" << std::endl;
+                std::cout << "Bullets: " << newBullets << " new, "
+                    << updatedBullets << " updated, "
+                    << removedBullets << " removed, "
+                    << "Total: " << bullets.size() << std::endl;
             }
 
             unlockBullets();
             continue;
         }
+
         //hadling of the score.
 		if (receivedData.find("SCORE_UPDATE") == 0)
 		{
@@ -1031,7 +1039,7 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
     // Get address information for the server
     addrinfo* result = nullptr;
     if (getaddrinfo(this->serverIP.c_str(), std::to_string(this->serverPort).c_str(), &hints, &result) != 0) {
-        //std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
+        std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
         return;
     }
 
@@ -1043,10 +1051,11 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
         reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
 
     if (sendResult == SOCKET_ERROR) {
-        //std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
+        std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
     }
     else {
-        //std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
+        // Debug output
+        std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
     }
 
     // Clean up

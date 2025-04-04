@@ -425,11 +425,9 @@ void GameStateAsteroidsUpdate(void)
 
 
 			// Shoot a bullet if space is triggered (Create a new object instance)
+// Shoot a bullet if space is triggered (Create a new object instance)
 			if (AEInputCheckTriggered(AEVK_SPACE) && !spaceDebounce) {
 				spaceDebounce = true; // Set debounce flag to prevent multiple bullets
-
-				// Log to track bullet creation for debugging
-				//std::cout << "Creating bullet from spacebar press" << std::endl;
 
 				// Create a bullet in the direction the ship is facing
 				AEVec2 bulletDir;
@@ -469,14 +467,14 @@ void GameStateAsteroidsUpdate(void)
 					bData.velX = bulletVel.x;
 					bData.velY = bulletVel.y;
 					bData.dir = spShip->dirCurr;
-					bData.fromLocalPlayer = true;
+					bData.fromLocalPlayer = true; // This flag is critical!
 					bullets[bulletID] = bData;
 					Client::unlockBullets();
 
 					// Report to server
 					g_client.reportBulletCreation(bulletPos, bulletVel, spShip->dirCurr, bulletID);
 
-					//std::cout << "Created local bullet with ID: " << bulletID << std::endl;
+					std::cout << "Created local bullet with ID: " << bulletID << std::endl;
 				}
 			}
 			else if (!AEInputCheckCurr(AEVK_SPACE)) {
@@ -1322,14 +1320,17 @@ void renderNetworkBullets() {
 	// Use Client's lock/unlock methods instead of trying to access the mutex directly
 	Client::lockBullets();
 
+	// Debugging: Print how many bullets we have
+	//std::cout << "Rendering " << bullets.size() << " network bullets" << std::endl;
+
 	// Access the bullets map directly (it should be an extern variable)
 	for (const auto& pair : bullets) {
+		const bulletData& bullet = pair.second;
+
 		// Skip bullets from the local player (already rendered locally)
-		if (pair.second.fromLocalPlayer) {
+		if (bullet.fromLocalPlayer) {
 			continue;
 		}
-
-		const bulletData& bullet = pair.second;
 
 		// Create a temporary bullet instance for rendering
 		AEVec2 scale;

@@ -638,7 +638,33 @@ void Server::handleUdpClient(UdpClientData message)
     }
 
     if (messageStr.find("BULLET_CREATE ") == 0) {
-        // Parse the bullet creation message logic...
+        // Parse the bullet creation message
+        // Format: "BULLET_CREATE posX posY velX velY dir bulletID"
+        float bulletX, bulletY, bulletVelX, bulletVelY, bulletDir;
+        std::string bulletID;
+
+        // Parse the message
+        std::istringstream iss(messageStr.substr(14)); // Skip "BULLET_CREATE "
+        if (iss >> bulletX >> bulletY >> bulletVelX >> bulletVelY >> bulletDir >> bulletID) {
+            // Create new bullet data
+            bulletData bullet;
+            bullet.bulletID = bulletID;
+            bullet.x = bulletX;
+            bullet.y = bulletY;
+            bullet.velX = bulletVelX;
+            bullet.velY = bulletVelY;
+            bullet.dir = bulletDir;
+            bullet.creationTime = std::chrono::steady_clock::now();
+
+            // Store the bullet
+            bullets[bulletID] = bullet;
+
+            // Debug output
+            std::cout << "Server received bullet: " << bulletID << " at (" << bulletX << ", " << bulletY << ")" << std::endl;
+        }
+        else {
+            std::cerr << "Failed to parse bullet data: " << messageStr << std::endl;
+        }
         return;
     }
 
