@@ -32,7 +32,7 @@ Client g_client;  // Global client object
 
 /******************************************************************************/
 /*!
-	Starting point of the application
+	Starting application
 */
 /******************************************************************************/
 int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _In_ LPSTR command_line, _In_ int show)
@@ -45,18 +45,13 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 		_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 	#endif
 
-	//int * pi = new int;
-	////delete pi;
-	//Get server ip and port from the user.
-
-
-	// Initialize the system
+	// Initializing the system
 	AESysInit (instanceH, show, 800, 600, 1, 60, false, NULL);
 
-	// Changing the window title
+	// Add the window title
 	AESysSetWindowTitle("Assignment 4");
 
-	//set background color
+	// Set background color
 	AEGfxSetBackgroundColor(0.0f, 0.0f, 0.0f);
 
 	GameStateMgrInit(GS_ASTEROIDS);
@@ -67,7 +62,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	std::string path = {"../Resources/ClientInfo/client.txt"};
 	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 20);
 	
-	// Initialize and run the client
+	// Initialize & run client
 	g_client.getServerInfo(path, serverIP, server_Port);
 	serverPort = static_cast<uint16_t>(std::stoul(server_Port));
 	if (!g_client.initialize(serverIP, serverPort)) {
@@ -76,7 +71,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	}
 	while(gGameStateCurr != GS_QUIT)
 	{
-		// reset the system modules
+		// Reset system
 		AESysReset();
 
 		// If not restarting, load the gamestate
@@ -120,6 +115,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	}
 
 	AEGfxDestroyFont(fontId);
-	// free the system
+
+	// Free system
 	AESysExit();
 }
