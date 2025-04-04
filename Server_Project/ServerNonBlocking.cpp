@@ -94,8 +94,8 @@ private:
     // Constants for asteroid creation
     const float ASTEROID_MIN_SCALE = 50.0f;
     const float ASTEROID_MAX_SCALE = 100.0f;
-    const int ASTEROID_MAX_COUNT = 12; // Maximum number of asteroids
-    const float ASTEROID_CREATION_INTERVAL = 2.0f; // Seconds between asteroid creation
+    const int ASTEROID_MAX_COUNT = 15; // Maximum number of asteroids
+    const float ASTEROID_CREATION_INTERVAL = 1.0f; // Seconds between asteroid creation
     const float ASTEROID_UPDATE_INTERVAL = 0.05f; // Seconds between asteroid updates
 
     // For bullets management
