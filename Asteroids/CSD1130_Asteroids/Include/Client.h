@@ -8,14 +8,7 @@
 \	         s.aaronnicholas@digipen.edu
 \	         jayjunxiang.lim@digipen.edu
 \date 28 March, 2025
-\brief This file declares functions
-bool CollisionIntersection_RectRect(const AABB & aabb1,          //Input
-                                    const AEVec2 & vel1,         //Input
-                                    const AABB & aabb2,          //Input
-                                    const AEVec2 & vel2,         //Input
-                                    float& firstTimeOfCollision);
-
-Copyright (C) 2024 DigiPen Institute of Technology.
+\brief Copyright (C) 2025 DigiPen Institute of Technology.
 Reproduction or disclosure of this file or its contents
 without the prior written consent of DigiPen Institute of
 Technology is prohibited.
@@ -52,28 +45,12 @@ Technology is prohibited.
 #include <unordered_set>
 #include <unordered_map>
 
-// Return code constants for different exit conditions
-constexpr int RETURN_CODE_1 = 1; // General failure
-constexpr int RETURN_CODE_2 = 2; // Unused in current implementation
-constexpr int RETURN_CODE_3 = 3; // Unused in current implementation
-constexpr int RETURN_CODE_4 = 4; // Command format error
-
-// Command ID enumeration - protocol definition for client-server communication
-enum CMDID : unsigned char {
-    UNKNOWN = 0x0,          // Unknown command
-    REQ_QUIT = 0x1,         // Request to quit/disconnect
-    REQ_ECHO = 0x2,         // Request to echo a message
-    RSP_ECHO = 0x3,         // Response to an echo request
-    REQ_LISTUSERS = 0x4,    // Request to list connected users
-    RSP_LISTUSERS = 0x5,    // Response with list of users
-    CMD_TEST = 0x20,        // Test command
-    ECHO_ERROR = 0x30       // Error in echo operation
-};
 struct UdpClientData {
     sockaddr_in clientAddr;
     char data[1024];  // Buffer for incoming data
     int dataSize;     // Size of the incoming data
 };
+
 /**
  * Client class that encapsulates all client functionality.
  * Manages socket connection, network I/O, and user interaction.
@@ -122,7 +99,6 @@ public:
     void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID = "");
     void reportAsteroidDestruction(const std::string& asteroidID);
     void reportPlayerScore(const std::string& playerID, int score);
-    void updateAsteroidInterpolation();
 
 private:
     SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection

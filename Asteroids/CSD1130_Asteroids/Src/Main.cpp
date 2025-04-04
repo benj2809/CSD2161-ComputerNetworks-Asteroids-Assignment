@@ -67,7 +67,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	serverPort = static_cast<uint16_t>(std::stoul(server_Port));
 	if (!g_client.initialize(serverIP, serverPort)) {
 		std::cerr << "Client initialization failed." << std::endl;
-		return RETURN_CODE_1;
+		return 1;
 	}
 	while(gGameStateCurr != GS_QUIT)
 	{

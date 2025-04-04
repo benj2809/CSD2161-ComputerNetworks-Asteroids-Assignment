@@ -35,161 +35,167 @@ std::mutex Client::bulletsMutex;  // Definition of the static mutex
 std::unordered_map<std::string, bulletData> bullets;  // Global bullets map
 
 /**
- * Initialize the client with server connection details
- * @param serverIP The IP address of the server to connect to
- * @param serverPort The port number of the server
- * @return true if initialization successful, false otherwise
+ * @brief Initializes the client with server connection details.
+ *
+ * @param serverIP The IP address of the server to connect to.
+ * @param serverPort The port number of the server.
+ * @return true if initialization is successful, false otherwise.
  */
 bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
-    this->serverIP = serverIP;     // Store server IP
-    this->serverPort = serverPort; // Store server port
-
+    this->serverIP = serverIP;
+    this->serverPort = serverPort;
     pCount = 0;
 
     // Perform initialization steps in sequence
     if (!setupWinsock()) return false;
     if (!resolveAddress(serverIP, serverPort)) return false;
     if (!createSocket()) return false;
-    // if (!connectToServer()) return false;
 
     return true;
 }
 
 /**
- * Run the client in interactive mode
- * Creates a separate thread for network operations and handles user input
+ * @brief Runs the client in interactive mode.
+ *
+ * This function starts a network thread for handling communication
+ * and processes user input on the main thread.
  */
 void Client::run() {
-    // Create and detach network handling thread
-    sendToServerUdp();//sends a message to the server.
+    // Send an initial message to the server
+    sendToServerUdp();
 
-    /*  std::thread idThread(&Client::handleID, this);
-    idThread.detach();*/
-
+    // Start network handling in a separate thread
     std::thread networkThread(&Client::handleNetwork, this);
     networkThread.detach();
 
-    // Process user input on the main thread
-    //handleUserInput();
-
+    // Handle user input (currently disabled)
+    // handleUserInput();
 }
 
 /**
- * Run the client in script mode
- * @param scriptPath Path to the script file containing commands
+ * @brief Runs the client in script mode.
+ *
+ * This function reads and executes commands from a script file.
+ *
+ * @param scriptPath Path to the script file containing commands.
  */
 void Client::runScript(const std::string& scriptPath) {
-    // Create and detach network handling thread
+    // Start network handling in a separate thread
     std::thread networkThread(&Client::handleNetwork, this);
     networkThread.detach();
 
-    // Process script commands
-    //handleScript(scriptPath);
+    // Process script commands (currently disabled)
+    // handleScript(scriptPath);
+
+    // Send an initial message to the server
     sendToServerUdp();
 }
 
-void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port)
-{
-    std::ifstream file(scriptPath);  // Open the file
-
-    if (!file) {  // Check if the file was opened successfully
+/**
+ * @brief Retrieves server information (IP and port) from a script file.
+ *
+ * @param scriptPath Path to the script file.
+ * @param IP Reference to a string to store the extracted IP address.
+ * @param port Reference to a string to store the extracted port number.
+ */
+void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port) {
+    std::ifstream file(scriptPath);
+    if (!file) {
         std::cerr << "Error: Could not open file: " << scriptPath << std::endl;
         return;
     }
 
-    std::getline(file, IP);   // Read the first line (IP)
-    std::getline(file, port); // Read the second line (Port)
+    std::getline(file, IP);
+    std::getline(file, port);
 
-    file.close();  // Close the file
+    file.close();
 }
 
+/**
+ * @brief Sends player data (position, rotation, score) to the server via UDP.
+ */
 void Client::sendToServerUdp() {
-
-    ////get position of th ship.
+    // Retrieve player data
     AEVec2 position = returnPlayerPosition();
-
-    // Direction ship is facing.
     float rot = returnPlayerRotation();
-
     int score = returnPlayerScore();
 
-    // Bullet info
-
-    // const std::string message = "Hello World";  // Message to send
+    // Construct message
     std::string message = std::to_string(position.x) + " " +
         std::to_string(position.y) + " " +
         std::to_string(rot) + " " +
         std::to_string(score);
-    //std::cout << position_1.c_str() << std::endl;
-    // Prepare the UdpClientData structure
-    UdpClientData udpMessage;
-    ZeroMemory(&udpMessage, sizeof(udpMessage));  // Clear the struct to avoid leftover data
 
-    // Copy the message into the structure using strncpy_s
+    // Prepare UDP message structure
+    UdpClientData udpMessage;
+    ZeroMemory(&udpMessage, sizeof(udpMessage));
+
+    // Copy message into the structure
     errno_t err = strncpy_s(udpMessage.data, sizeof(udpMessage.data), message.c_str(), message.length());
     if (err != 0) {
         std::cerr << "Error copying message to buffer." << std::endl;
         return;
     }
 
-    // Setup address hints structure
+    // Setup address hints
     addrinfo hints{};
     ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;        // IPv4
-    hints.ai_socktype = SOCK_DGRAM;  // UDP (use SOCK_DGRAM instead of SOCK_STREAM)
-    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
 
-    // Get address information for the server
+    // Resolve server address
     addrinfo* result = nullptr;
     if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
         std::cerr << "getaddrinfo failed." << std::endl;
         return;
     }
 
-    // Fill in the clientAddr in the structure
+    // Store resolved address in the message structure
     udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
 
-    // Send message to the server using the pre-existing socket
+    // Send data to the server
     int sendResult = sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
         reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr));
 
     if (sendResult == SOCKET_ERROR) {
         std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
     }
-    /*else {
-        std::cout << "Message sent: " << udpMessage.data << std::endl;
-    }*/
 
-    // Clean up
-    freeaddrinfo(result);  // Free the address info as it's no longer needed
+    // Cleanup
+    freeaddrinfo(result);
 }
 
-
+/**
+ * @brief Displays the current player scores.
+ *
+ * This function prints the scores and positions of all players in a formatted table.
+ */
 void Client::displayPlayerScores() {
+    std::lock_guard<std::mutex> lock(mutex);
 
-    std::lock_guard<std::mutex> lock(mutex); // Use your existing mutex to prevent concurrent access
-    std::cout << "\n=== PLAYER SCORES ===" << std::endl;
-    std::cout << "Player ID\tScore\tPosition" << std::endl;
-    std::cout << "------------------------------------" << std::endl;
+    std::cout << "\n================= PLAYER SCORES ==================" << std::endl;
+    std::cout << "Player ID          Score          Position" << std::endl;
+    std::cout << "--------------------------------------------------" << std::endl;
 
-    // Fix: Replace structured binding with traditional iterator approach
     for (const auto& pair : players) {
         int id = pair.first;
         const playerData& player = pair.second;
 
-        std::cout << id << "\t\t"
-            << player.score << "\t"
+        std::cout << id << "                  "
+            << player.score << "              "
             << "(" << std::fixed << std::setprecision(1) << player.x
             << ", " << std::fixed << std::setprecision(1) << player.y << ")"
             << (id == playerID ? " [YOU]" : "") << std::endl;
     }
-    std::cout << "======================" << std::endl;
+
+    std::cout << "--------------------------------------------------" << std::endl;
 }
 
-
 /**
- * Initialize the Winsock library
- * @return true if successful, false otherwise
+ * @brief Initializes the Winsock library.
+ *
+ * @return true if Winsock is successfully initialized, false otherwise.
  */
 bool Client::setupWinsock() {
     WSADATA wsaData{};
@@ -201,17 +207,18 @@ bool Client::setupWinsock() {
 }
 
 /**
- * Resolve server address using DNS
- * @param serverIP Server IP address
- * @param serverPort Server port number
- * @return true if address resolution successful, false otherwise
+ * @brief Resolves the server address using DNS.
+ *
+ * @param serverIP The IP address of the server.
+ * @param serverPort The port number of the server.
+ * @return true if address resolution is successful, false otherwise.
  */
 bool Client::resolveAddress(const std::string& serverIP, uint16_t serverPort) {
     addrinfo hints{};
     ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;        // IPv4
-    hints.ai_socktype = SOCK_DGRAM;  // UDP (use SOCK_DGRAM instead of SOCK_STREAM)
-    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
 
     addrinfo* result = nullptr;
     if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
@@ -220,18 +227,17 @@ bool Client::resolveAddress(const std::string& serverIP, uint16_t serverPort) {
         return false;
     }
 
-    // Free the address info as we're just testing resolution
     freeaddrinfo(result);
     return true;
 }
 
-
 /**
- * Create a TCP socket
- * @return true if socket creation successful, false otherwise
+ * @brief Creates a UDP socket for communication.
+ *
+ * @return true if the socket is successfully created, false otherwise.
  */
 bool Client::createSocket() {
-    clientSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);  // Use SOCK_DGRAM for UDP
+    clientSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "Socket creation failed." << std::endl;
         WSACleanup();
@@ -241,8 +247,12 @@ bool Client::createSocket() {
 }
 
 /**
- * Connect to the server using the stored IP and port
- * @return true if connection successful, false otherwise
+ * @brief Connects the client to the server using the stored IP and port.
+ *
+ * This function initializes a UDP socket and retrieves the server's address information.
+ * Since UDP is connectionless, there is no explicit connection step.
+ *
+ * @return true if the server address information is retrieved successfully, false otherwise.
  */
 bool Client::connectToServer() {
     // Setup address hints structure (same as before)
@@ -270,13 +280,11 @@ bool Client::connectToServer() {
 
 
 /**
- * Thread function to handle network operations
- * Continuously receives and processes data from the server
+ * @brief Handles incoming network messages in a separate thread.
+ *
+ * This function continuously listens for messages from the server, processes game updates,
+ * and updates asteroid, bullet, and player data accordingly. It also processes score updates.
  */
- /**
-  * Thread function to handle network operations
-  * Continuously receives and processes data from the server
-  */
 void Client::handleNetwork() {
     std::vector<uint8_t> recvQueue;
     sockaddr_in serverAddr;
@@ -590,6 +598,13 @@ void Client::handleNetwork() {
     }
 }
 
+/**
+ * @brief Reports the destruction of an asteroid to the server.
+ *
+ * Sends a message to the server containing the asteroid ID to indicate its destruction.
+ *
+ * @param asteroidID The ID of the destroyed asteroid.
+ */
 void Client::reportAsteroidDestruction(const std::string& asteroidID) {
     // Create the message to send to server
     std::string message = "DESTROY_ASTEROID|" + asteroidID;
@@ -619,6 +634,14 @@ void Client::reportAsteroidDestruction(const std::string& asteroidID) {
     freeaddrinfo(result);
 }
 
+/**
+ * @brief Reports a player's updated score to the server.
+ *
+ * Sends a message to the server with the player's ID and new score.
+ *
+ * @param playerID The ID of the player whose score is being updated.
+ * @param score The new score of the player.
+ */
 void Client::reportPlayerScore(const std::string& playerID, int score)
 {// Create the message to send to server
 	std::string message = "UPDATE_SCORE|" + playerID + " " + std::to_string(score);
@@ -644,6 +667,10 @@ void Client::reportPlayerScore(const std::string& playerID, int score)
 }
 
 
+/**
+ * Updates asteroid positions using interpolation.
+ * Ensures smooth movement between received position updates.
+ */
 void updateAsteroidInterpolation() {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
     auto currentTime = std::chrono::steady_clock::now();
@@ -652,66 +679,63 @@ void updateAsteroidInterpolation() {
         auto& asteroid = pair.second;
         if (!asteroid.active) continue;
 
-        // Calculate time since last update
         float dt = std::chrono::duration<float>(currentTime - asteroid.lastUpdateTime).count();
+        const float INTERP_TIME = 0.1f; // 100ms for smooth interpolation
 
-        // Use shorter interpolation time for smoother movement
-        const float INTERP_TIME = 0.1f; // 100ms
-
-        // Interpolate position
         if (dt < INTERP_TIME) {
             float t = dt / INTERP_TIME;
-            asteroid.currentX = asteroid.currentX + (asteroid.targetX - asteroid.currentX) * t;
-            asteroid.currentY = asteroid.currentY + (asteroid.targetY - asteroid.currentY) * t;
+            asteroid.currentX += (asteroid.targetX - asteroid.currentX) * t;
+            asteroid.currentY += (asteroid.targetY - asteroid.currentY) * t;
         }
         else {
-            // If enough time has passed, just use the target position
             asteroid.currentX = asteroid.targetX;
             asteroid.currentY = asteroid.targetY;
         }
     }
 }
 
+/**
+ * Reports the creation of a bullet to the server.
+ *
+ * @param pos The position of the bullet.
+ * @param vel The velocity of the bullet.
+ * @param dir The direction the bullet is traveling.
+ * @param bulletID Optional bullet identifier; if empty, a new ID is generated.
+ */
 void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
     if (this->clientSocket == INVALID_SOCKET) {
         std::cerr << "ERROR: Cannot send bullet creation - socket is invalid!" << std::endl;
         return;
     }
 
-    // Use the provided bulletID or generate a new one
-    std::string finalBulletID = bulletID;
-    if (finalBulletID.empty()) {
-        finalBulletID = std::to_string(playerID) + "_" +
-            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-    }
+    // Generate a unique bullet ID if not provided
+    std::string finalBulletID = bulletID.empty() ?
+        std::to_string(playerID) + "_" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
+        : bulletID;
 
-    // Format: "BULLET_CREATE posX posY velX velY dir bulletID"
+    // Construct the message to send
     std::string message = "BULLET_CREATE " +
-        std::to_string(pos.x) + " " +
-        std::to_string(pos.y) + " " +
-        std::to_string(vel.x) + " " +
-        std::to_string(vel.y) + " " +
-        std::to_string(dir) + " " +
-        finalBulletID;  // Include bullet ID in message
+        std::to_string(pos.x) + " " + std::to_string(pos.y) + " " +
+        std::to_string(vel.x) + " " + std::to_string(vel.y) + " " +
+        std::to_string(dir) + " " + finalBulletID;
 
-    // Set up server address
+    // Set up server address information
     addrinfo hints{};
     ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;        // IPv4
-    hints.ai_socktype = SOCK_DGRAM;   // UDP
-    hints.ai_protocol = IPPROTO_UDP;  // UDP protocol
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
 
-    // Get address information for the server
     addrinfo* result = nullptr;
     if (getaddrinfo(this->serverIP.c_str(), std::to_string(this->serverPort).c_str(), &hints, &result) != 0) {
         std::cerr << "getaddrinfo failed when reporting bullet creation." << std::endl;
         return;
     }
 
-    // Extract the server address
     sockaddr_in tempServerAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
 
-    // Send to the server
+    // Send message to the server
     int sendResult = sendto(this->clientSocket, message.c_str(), message.length(), 0,
         reinterpret_cast<sockaddr*>(&tempServerAddr), sizeof(tempServerAddr));
 
@@ -719,22 +743,18 @@ void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float di
         std::cerr << "Send bullet creation failed with error: " << WSAGetLastError() << std::endl;
     }
     else {
-        // Debug output
         std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
     }
 
-    // Clean up
     freeaddrinfo(result);
 }
 
 /**
- * Clean up resources (sockets, Winsock) on exit
+ * Cleans up network resources by closing the socket and cleaning up Winsock.
  */
 void Client::cleanup() {
-    // Close socket if valid
     if (clientSocket != INVALID_SOCKET) {
         closesocket(clientSocket);
     }
-    // Clean up Winsock
     WSACleanup();
 }

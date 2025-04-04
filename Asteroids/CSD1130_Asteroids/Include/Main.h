@@ -37,9 +37,7 @@ extern double	g_appTime;
 #include "GameState_Asteroids.h"
 #include "Collision.h"
 #include "Client.h"
-
 extern s8	fontId;
-
 #endif
 
 
