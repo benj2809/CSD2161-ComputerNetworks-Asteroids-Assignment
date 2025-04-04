@@ -56,11 +56,13 @@ void renderNetworkBullets();
 // Asteroid
 void renderServerAsteroids();
 void updateAsteroidInterpolation();
+void checkBulletAsteroidCollisions();
 //
 
 void syncPlayers(std::unordered_map<int, playerData>& pData);
 void RenderPlayerNames(std::unordered_map<int, playerData>& pData);
 void DisplayScores(const std::unordered_map<int, playerData>& players, int playerID);
+
 // ---------------------------------------------------------------------------
 
 #endif // CSD1130_GAME_STATE_PLAY_H_
