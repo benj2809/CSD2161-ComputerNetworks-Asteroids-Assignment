@@ -1,25 +1,83 @@
 ﻿  Client.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,44): warning C4458: declaration of 'serverIP' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,63): warning C4458: declaration of 'serverPort' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(62,43): warning C4100: 'scriptPath': unreferenced formal parameter
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(134,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,48): warning C4458: declaration of 'serverIP' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,67): warning C4458: declaration of 'serverPort' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(950,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(957,51): warning C4458: declaration of 'playerID' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(975,54): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(1050,80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/Client.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+  (compiling source file 'Src/Client.cpp')
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,44): warning C4458: declaration of 'serverIP' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(107,17):
+      see declaration of 'Client::serverIP'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,63): warning C4458: declaration of 'serverPort' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(108,14):
+      see declaration of 'Client::serverPort'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(62,43): warning C4100: 'scriptPath': unreferenced formal parameter
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(134,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,48): warning C4458: declaration of 'serverIP' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(107,17):
+      see declaration of 'Client::serverIP'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,67): warning C4458: declaration of 'serverPort' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(108,14):
+      see declaration of 'Client::serverPort'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(614,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(621,51): warning C4458: declaration of 'playerID' hides class member
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(116,16):
+      see declaration of 'Client::playerID'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(639,54): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(714,80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  Collision.cpp
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/Collision.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+  (compiling source file 'Src/Collision.cpp')
+  
+  GameStateMgr.cpp
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/GameStateMgr.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+  (compiling source file 'Src/GameStateMgr.cpp')
+  
   GameState_Asteroids.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(350,8): warning C4189: 'dt': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(748,7): warning C4101: 'strBuffer': unreferenced local variable
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1230,22): warning C4189: 'id': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1277,63): warning C4459: declaration of 'players' hides global declaration
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1307,7): warning C4189: 'color': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1314,46): warning C4100: 'score': unreferenced formal parameter
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1314,32): warning C4100: 'playerID': unreferenced formal parameter
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/GameState_Asteroids.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+  (compiling source file 'Src/GameState_Asteroids.cpp')
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(350,8): warning C4189: 'dt': local variable is initialized but not referenced
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(748,7): warning C4101: 'strBuffer': unreferenced local variable
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1230,22): warning C4189: 'id': local variable is initialized but not referenced
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1277,63): warning C4459: declaration of 'players' hides global declaration
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(194,44):
+      see declaration of 'players'
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1307,7): warning C4189: 'color': local variable is initialized but not referenced
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1314,46): warning C4100: 'score': unreferenced formal parameter
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1314,32): warning C4100: 'playerID': unreferenced formal parameter
+  Main.cpp
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
+  (compiling source file 'Src/Main.cpp')
+      C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9):
+      '_WINSOCK_DEPRECATED_NO_WARNINGS' previously declared on the command line
+  
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
+  (compiling source file 'Src/Main.cpp')
+  
   Generating Code...
-  CSD1130_Asteroids.vcxproj -> C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
+C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp(120,1): warning C4715: 'WinMain': not all control paths return a value
+  CSD1130_Asteroids.vcxproj -> C:\Users\Micro\OneDrive\Desktop\digipen files\Trimester 5\COMPUTER NETWORKS\Assignments\Assignment 4\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
