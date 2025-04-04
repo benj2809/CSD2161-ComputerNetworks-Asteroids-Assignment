@@ -1,13 +1,38 @@
 ﻿/* Start Header
-*****************************************************************/
+*******************************************************************/
 /*!
-\file server.cpp
-\author AMOS LAU (junhaoamos.lau@digipen.edu)
-\par Course CSD2161
-\date 03/16/2025
-\brief
-This file implements the server file which will be used to implement a
-simple echo server.
+\file Server.cpp
+\co author Ho Jing Rui
+\co author Saminathan Aaron Nicholas
+\co author Jay Lim Jun Xiang
+\par emails: jingrui.ho@digipen.edu
+\	         s.aaronnicholas@digipen.edu
+\	         jayjunxiang.lim@digipen.edu
+\date 28 March, 2025
+\brief This file contains the implementation of the GameServer class which handles:
+\      Network communication via UDP sockets
+\      Game state management (players, asteroids, bullets)
+\      Game timing and synchronization
+\      Client message processing
+\
+\      Key Features:
+\      Uses Windows Sockets 2.2 (Winsock) for networking
+\      Thread-safe game state management
+\      Efficient UDP message broadcasting
+\      Scalable task queue architecture
+\      Real-time game state synchronization
+\
+\      Network Protocol:
+\      UDP-based communication
+\      Custom text-based protocol for game messages
+\      Supports player positions, asteroid states, bullet tracking
+\      Includes score synchronization and game timing
+\
+\      Dependencies:
+\      Windows SDK
+\      Winsock 2.2 library
+\      Standard C++17 libraries
+\      Custom taskqueue.h and playerdata.h headers
 Copyright (C) 2025 DigiPen Institute of Technology.
 Reproduction or disclosure of this file or its contents without the
 prior written consent of DigiPen Institute of Technology is prohibited.

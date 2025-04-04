@@ -1,3 +1,38 @@
+/* Start Header
+*******************************************************************/
+/*!
+\file playerdata.h
+\author Ho Jing Rui
+\author Saminathan Aaron Nicholas
+\author Jay Lim Jun Xiang
+\par emails: jingrui.ho@digipen.edu
+\	         s.aaronnicholas@digipen.edu
+\	         jayjunxiang.lim@digipen.edu
+\date 28 March, 2025
+\brief This file contains the data structures for:
+\      - Player information (position, score, connection details)
+\      - Bullet tracking (position, velocity, lifetime)
+\      - Asteroid properties (position, scale, movement)
+\
+\      Global Containers:
+\      - players: Map of all connected players (key: "IP:Port")
+\      - bullets: Map of active bullets (key: bulletID)
+\      - asteroids: Map of active asteroids (key: asteroidID)
+\
+\      Thread Safety:
+\      - asteroidsMutex protects asteroid data access
+\
+\      Data Structures:
+\      - PlayerData: Tracks player state and network info
+\      - BulletData: Manages bullet physics and lifetime
+\      - AsteroidData: Handles asteroid properties and state
+\
+Copyright (C) 2025 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents without the
+prior written consent of DigiPen Institute of Technology is prohibited.
+*/
+/* End Header
+*******************************************************************/
 #pragma once
 
 #include <unordered_map>
