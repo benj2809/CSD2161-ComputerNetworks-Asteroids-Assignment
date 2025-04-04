@@ -1,39 +1,6 @@
-﻿  Client.cpp
+﻿  GameState_Asteroids.cpp
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,44): warning C4458: declaration of 'serverIP' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(24,63): warning C4458: declaration of 'serverPort' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(62,43): warning C4100: 'scriptPath': unreferenced formal parameter
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(134,66): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,48): warning C4458: declaration of 'serverIP' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(190,67): warning C4458: declaration of 'serverPort' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(942,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(949,51): warning C4458: declaration of 'playerID' hides class member
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(967,54): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Client.cpp(1042,80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-  Collision.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  GameStateMgr.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  GameState_Asteroids.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-<<<<<<< HEAD
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(335,8): warning C4189: 'dt': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(722,7): warning C4101: 'strBuffer': unreferenced local variable
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1184,22): warning C4189: 'id': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1231,63): warning C4459: declaration of 'players' hides global declaration
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1261,7): warning C4189: 'color': local variable is initialized but not referenced
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1268,46): warning C4100: 'score': unreferenced formal parameter
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1268,32): warning C4100: 'playerID': unreferenced formal parameter
-  Main.cpp
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(7,9): warning C4005: '_WINSOCK_DEPRECATED_NO_WARNINGS': macro redefinition
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Include\Client.h(90,48): warning C4267: 'return': conversion from 'size_t' to 'const int', possible loss of data
-  Generating Code...
-C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\Main.cpp(120,1): warning C4715: 'WinMain': not all control paths return a value
-=======
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(350,8): warning C4189: 'dt': local variable is initialized but not referenced
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(750,7): warning C4101: 'strBuffer': unreferenced local variable
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1232,22): warning C4189: 'id': local variable is initialized but not referenced
@@ -41,5 +8,4 @@ C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Astero
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1309,7): warning C4189: 'color': local variable is initialized but not referenced
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1316,46): warning C4100: 'score': unreferenced formal parameter
 C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\CSD1130_Asteroids\Src\GameState_Asteroids.cpp(1316,32): warning C4100: 'playerID': unreferenced formal parameter
->>>>>>> simon_branch
   CSD1130_Asteroids.vcxproj -> C:\GitHub\CSD2161-ComputerNetworks-Asteroids-Assignment\Asteroids\Bin\CSD1130_AsteroidsD.exe
