@@ -1148,7 +1148,13 @@ void checkBulletAsteroidCollisions() {
 	Client::unlockBullets();
 }
 
-// Sync players
+/**
+ * @brief Synchronizes the state of player ships based on the provided player data.
+ *
+ * This function iterates through all the players in the given data, ensures that ships for active players are created or updated, and destroys ships for inactive players.
+ *
+ * @param pData A map containing player data, keyed by player ID.
+ */
 void syncPlayers(std::unordered_map<int, PlayerData>& pData) {
 	// Clean up any player ships that aren't in the current player data
 	for (auto it = pShips.begin(); it != pShips.end();) {
@@ -1196,6 +1202,13 @@ void syncPlayers(std::unordered_map<int, PlayerData>& pData) {
 	}
 }
 
+/**
+ * @brief Renders the names of all players at their respective positions.
+ *
+ * This function iterates through all players and renders their names at positions based on their current location. The name is adjusted based on window bounds and normalization.
+ *
+ * @param pData A map containing player data, keyed by player ID.
+ */
 void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData) {
 	for (const auto& pair : pData) {
 		const PlayerData& player = pair.second; // Get player data
@@ -1233,48 +1246,39 @@ void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData) {
 	}
 }
 
+/**
+ * @brief Renders server-side asteroids by updating their positions and drawing them.
+ *
+ * This function updates asteroid interpolation and renders them with correct transformations.
+ */
 void renderServerAsteroids() {
-	// First update all asteroid interpolation
 	updateAsteroidInterpolation();
 
 	std::lock_guard<std::mutex> lock(asteroidsMutex);
 
-	// Debug information - uncomment if needed
-	// std::cout << "Rendering " << asteroids.size() << " asteroids" << std::endl;
-
-	// Iterate through all asteroids
 	for (const auto& pair : asteroids) {
 		const std::string& id = pair.first;
 		const auto& asteroid = pair.second;
 
-		// Debug print for asteroid positions - uncomment if needed
-		// std::cout << "Asteroid " << id << " at (" << asteroid.currentX << ", " << asteroid.currentY << ")" << std::endl;
-
 		if (!asteroid.isActive) continue;
 
-		// Create a temporary asteroid instance for rendering
 		AEVec2 scale;
 		AEVec2 pos;
 		AEVec2 vel;
 
-		// Use the interpolated position for rendering
 		AEVec2Set(&scale, asteroid.scaleX, asteroid.scaleY);
 		AEVec2Set(&pos, asteroid.currentX, asteroid.currentY);
 		AEVec2Set(&vel, asteroid.velocityX, asteroid.velocityY);
 
-		// Create the asteroid object instance
 		GameObjInst* pInst = gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-		// Skip if creation failed
 		if (!pInst) continue;
 
-		// Set the position and velocity explicitly
 		pInst->posCurr.x = pos.x;
 		pInst->posCurr.y = pos.y;
 		pInst->velCurr.x = vel.x;
 		pInst->velCurr.y = vel.y;
 
-		// Calculate the transform matrix for rendering
 		AEMtx33 trans, rot, scaleMtx;
 		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
 		AEMtx33Rot(&rot, pInst->dirCurr);
@@ -1282,72 +1286,28 @@ void renderServerAsteroids() {
 		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
 		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
 
-		// Render the asteroid
 		AEGfxSetTransform(pInst->transform.m);
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 
-		// Destroy the instance after rendering
 		gameObjInstDestroy(pInst);
 	}
 }
 
-void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int playerID) {
-	for (const auto& pair : gamePlayers) {
-		const PlayerData& player = pair.second; // Get player data
-
-		// Positioning
-		AEVec2 position;
-		f32 normalizedX, normalizedY;
-		AEVec2Set(&position, player.X, player.Y);
-
-		// Wrap the position to the window bounds
-		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
-		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
-
-		// Normalize the wrapped position from window bounds to [-1, 1]
-		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
-		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
-
-		normalizedX -= 0.2f;
-		normalizedY += 0.1f;
-
-		// Format the player's score text
-		char scoreText[256];
-		int id = pair.first;
-		int score = pair.second.score;
-		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, score);
-
-		// Set rendering settings (just like the reference)
-		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
-		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
-		AEGfxTextureSet(NULL, 0, 0);
-		AEGfxSetTransparency(1.0f);
-
-		// Define the color for the text (green for the player, white for others)
-		u32 color = (id == playerID) ? 0x00FF00 : 0xFFFFFF;
-
-		// Draw the score at the normalized position (same as name rendering)
-		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	}
-}
-
+/**
+ * @brief Renders bullets coming from the network, excluding those from the local player.
+ *
+ * This function iterates over network bullets, skipping those from the local player, and renders them based on their position and velocity.
+ */
 void renderNetworkBullets() {
-	// Use Client's lock/unlock methods instead of trying to access the mutex directly
 	Client::lockBullets();
 
-	// Debugging: Print how many bullets we have
-	//std::cout << "Rendering " << bullets.size() << " network bullets" << std::endl;
-
-	// Access the bullets map directly (it should be an extern variable)
 	for (const auto& pair : bullets) {
 		const BulletData& bullet = pair.second;
 
-		// Skip bullets from the local player (already rendered locally)
 		if (bullet.fromLocalPlayer) {
 			continue;
 		}
 
-		// Create a temporary bullet instance for rendering
 		AEVec2 scale;
 		AEVec2 pos;
 		AEVec2 vel;
@@ -1356,18 +1316,14 @@ void renderNetworkBullets() {
 		AEVec2Set(&pos, bullet.X, bullet.Y);
 		AEVec2Set(&vel, bullet.velocityX, bullet.velocityY);
 
-		// Create the bullet object instance
 		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.direction);
 
-		// Skip if creation failed
 		if (!pInst) continue;
 
-		// Set the position and direction explicitly
 		pInst->posCurr.x = pos.x;
 		pInst->posCurr.y = pos.y;
 		pInst->dirCurr = bullet.direction;
 
-		// Calculate the transform matrix for rendering
 		AEMtx33 trans, rot, scaleMtx;
 		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
 		AEMtx33Rot(&rot, pInst->dirCurr);
@@ -1375,14 +1331,52 @@ void renderNetworkBullets() {
 		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
 		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
 
-		// Render the bullet
 		AEGfxSetTransform(pInst->transform.m);
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 
-		// Destroy the instance after rendering
 		gameObjInstDestroy(pInst);
 	}
 
-	// Don't forget to unlock when done
 	Client::unlockBullets();
+}
+
+/**
+ * @brief Displays the scores of all players, highlighting the local player’s score.
+ *
+ * This function iterates through all players, renders their score at the correct position, and highlights the local player's score in green.
+ *
+ * @param gamePlayers A map containing player data, keyed by player ID.
+ * @param playerID The local player's ID.
+ */
+void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int playerID) {
+	for (const auto& pair : gamePlayers) {
+		const PlayerData& player = pair.second;
+
+		AEVec2 position;
+		f32 normalizedX, normalizedY;
+		AEVec2Set(&position, player.X, player.Y);
+
+		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
+		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+
+		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
+		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
+
+		normalizedX -= 0.2f;
+		normalizedY += 0.1f;
+
+		char scoreText[256];
+		int id = pair.first;
+		int score = pair.second.score;
+		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, score);
+
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+		AEGfxTextureSet(NULL, 0, 0);
+		AEGfxSetTransparency(1.0f);
+
+		u32 color = (id == playerID) ? 0x00FF00 : 0xFFFFFF;
+
+		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	}
 }
