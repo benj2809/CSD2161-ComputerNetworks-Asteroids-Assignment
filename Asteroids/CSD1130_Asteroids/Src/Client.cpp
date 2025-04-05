@@ -129,29 +129,29 @@ bool Client::connectToServer() {
  * Starts network thread and sends initial message
  */
 void Client::run() {
-    sendToServerUdp();
+    sendData();
     std::thread(&Client::receiveNetworkMessages, this).detach();
 }
 
 /**
  * @brief Runs the client in script mode
- * @param scriptPath Path to the script file containing commands
+ * @param scriptDirectory Path to the script file containing commands
  */
-void Client::runScript(const std::string& scriptPath) {
+void Client::runScript(const std::string& scriptDirectory) {
     std::thread(&Client::receiveNetworkMessages, this).detach();
-    sendToServerUdp();
+    sendData();
 }
 
 /**
  * @brief Retrieves server information from a script file
- * @param scriptPath Path to the script file
+ * @param scriptDirectory Path to the script file
  * @param IP Output parameter for server IP
  * @param port Output parameter for server port
  */
-void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port) {
-    std::ifstream file(scriptPath);
+void Client::getServerInfo(const std::string& scriptDirectory, std::string& IP, std::string& port) {
+    std::ifstream file(scriptDirectory);
     if (!file) {
-        std::cerr << "Error: Could not open file: " << scriptPath << std::endl;
+        std::cerr << "Error: " << scriptDirectory << " could not be opened." << std::endl;
         return;
     }
 
@@ -166,22 +166,20 @@ void Client::getServerInfo(const std::string& scriptPath, std::string& IP, std::
  * @brief Sends player data to the server via UDP
  * Includes position, rotation, and score
  */
-void Client::sendToServerUdp() {
+void Client::sendData() {
+
     // Get player data
-    AEVec2 position = returnPlayerPosition();
-    float rot = returnPlayerRotation();
-    int score = returnPlayerScore();
+    AEVec2 position = fetchPlayerPosition();
+    float rotation = fetchPlayerRotation();
+    int score = fetchPlayerScore();
 
     // Format message
-    std::string message = std::to_string(position.x) + " " +
-        std::to_string(position.y) + " " +
-        std::to_string(rot) + " " +
-        std::to_string(score);
+    std::string message = std::to_string(position.x) + " " + std::to_string(position.y) + " " + std::to_string(rotation) + " " + std::to_string(score);
 
     // Prepare UDP message
     UdpClientData udpMessage{};
     if (strncpy_s(udpMessage.data, sizeof(udpMessage.data), message.c_str(), message.length()) != 0) {
-        std::cerr << "Error copying message to buffer." << std::endl;
+        std::cerr << "Error: Message could not be copied to buffer." << std::endl;
         return;
     }
 
@@ -267,7 +265,7 @@ void Client::receiveNetworkMessages() {
 void Client::updateAsteroidsFromNetwork(const std::string& data) {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
     auto currentTime = std::chrono::steady_clock::now();
-    std::vector<std::string> updatedIds;
+    std::vector<std::string> updatedIDstrings;
 
     size_t pos = data.find('|');
     if (pos != std::string::npos) {
@@ -281,36 +279,49 @@ void Client::updateAsteroidsFromNetwork(const std::string& data) {
                 std::string id, value;
 
                 if (std::getline(iss, id, ',')) {
-                    updatedIds.push_back(id);
+                    updatedIDstrings.push_back(id);
                     bool isNew = (asteroids.find(id) == asteroids.end());
                     AsteroidData& asteroid = asteroids[id];
 
                     // Parse asteroid ID
                     try {
                         size_t numStart = id.find_first_of("0123456789");
-                        asteroid.asteroidID = (numStart != std::string::npos) ?
-                            std::stoi(id.substr(numStart)) :
-                            static_cast<int>(std::hash<std::string>{}(id));
+                        asteroid.asteroidID = (numStart != std::string::npos) ? std::stoi(id.substr(numStart)) : static_cast<int>(std::hash<std::string>{}(id));
                     }
                     catch (...) {
                         asteroid.asteroidID = static_cast<int>(std::hash<std::string>{}(id));
                     }
 
-                    // Store old positions for interpolation
-                    float oldTargetX = 0.0f, oldTargetY = 0.0f;
+                    // Store previous positions for interpolation
+                    float previousTargetX{ 0.0f };
+                    float previousTargetY{ 0.0f };
                     if (!isNew) {
-                        oldTargetX = asteroid.targetX;
-                        oldTargetY = asteroid.targetY;
+                        previousTargetX = asteroid.targetX;
+                        previousTargetY = asteroid.targetY;
                     }
 
                     // Parse asteroid properties
-                    if (std::getline(iss, value, ',')) asteroid.X = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) asteroid.Y = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) asteroid.velocityX = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) asteroid.velocityY = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) asteroid.scaleX = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) asteroid.scaleY = (float)atof(value.c_str());
-                    if (std::getline(iss, value)) asteroid.isActive = (value == "1");
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.X = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.Y = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.velocityX = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.velocityY = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.scaleX = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        asteroid.scaleY = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value)) {
+                        asteroid.isActive = (value == "1");
+                    }
 
                     // Update positions
                     asteroid.targetX = asteroid.X;
@@ -321,8 +332,8 @@ void Client::updateAsteroidsFromNetwork(const std::string& data) {
                         asteroid.currentY = asteroid.targetY;
                         asteroid.creationTime = currentTime;
                     }
-                    else if (std::abs(oldTargetX - asteroid.targetX) > 100 ||
-                        std::abs(oldTargetY - asteroid.targetY) > 100) {
+                    else if (std::abs(previousTargetX - asteroid.targetX) > 100 ||
+                        std::abs(previousTargetY - asteroid.targetY) > 100) {
                         asteroid.currentX = asteroid.targetX;
                         asteroid.currentY = asteroid.targetY;
                     }
@@ -336,7 +347,7 @@ void Client::updateAsteroidsFromNetwork(const std::string& data) {
 
     // Remove asteroids not in the update
     for (auto it = asteroids.begin(); it != asteroids.end();) {
-        if (std::find(updatedIds.begin(), updatedIds.end(), it->first) == updatedIds.end()) {
+        if (std::find(updatedIDstrings.begin(), updatedIDstrings.end(), it->first) == updatedIDstrings.end()) {
             it = asteroids.erase(it);
         }
         else {
@@ -378,14 +389,28 @@ void Client::updateBulletsFromNetwork(const std::string& data) {
 
                     if (isNewBullet) bullet.fromLocalPlayer = false;
 
-                    if (std::getline(iss, value, ',')) bullet.X = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) bullet.Y = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) bullet.velocityX = (float)atof(value.c_str());
-                    if (std::getline(iss, value, ',')) bullet.velocityY = (float)atof(value.c_str());
-                    if (std::getline(iss, value)) bullet.direction = (float)atof(value.c_str());
+                    if (std::getline(iss, value, ',')) {
+                        bullet.X = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        bullet.Y = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        bullet.velocityX = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value, ',')) {
+                        bullet.velocityY = (float)atof(value.c_str());
+                    }
+                    if (std::getline(iss, value)) {
+                        bullet.direction = (float)atof(value.c_str());
+                    }
 
-                    if (isNewBullet) newBullets++;
-                    else updatedBullets++;
+                    if (isNewBullet) {
+                        newBullets++;
+                    }
+                    else {
+                        updatedBullets++;
+                    }
                 }
             }
             pos = nextPos;

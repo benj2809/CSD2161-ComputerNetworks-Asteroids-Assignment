@@ -35,15 +35,15 @@ void GameStateAsteroidsUnload();
 static AEVec2 finalPlayerPosition;
 static float playerRotate;
 static int Playerscore;
-AEVec2 returnPlayerPosition();
-float returnPlayerRotation();
-int returnPlayerScore();
+AEVec2 fetchPlayerPosition();
+float fetchPlayerRotation();
+int fetchPlayerScore();
 
 // Bullet state
 static AEVec2 finalBulletPosition;
 static float bulletRotate;
-AEVec2 returnBulletPosition();
-float returnBulletRotation();
+AEVec2 fetchBulletPosition();
+float fetchBulletRotation();
 void renderNetworkBullets();
 
 // Asteroid state

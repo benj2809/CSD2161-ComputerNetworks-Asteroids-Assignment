@@ -99,53 +99,57 @@ extern Client globalClient;
 // Flags
 const unsigned long FLAG_ACTIVE = 0x00000001;
 
-/******************************************************************************/
-/*!
-	Function to aid in creating an instance for a object. Essentially initializing the new instance with the appropriate values.
-*/
-/******************************************************************************/
+/**
+ * @brief Creates a new game object instance
+ *
+ * Allocates and initializes a game object instance of the specified type.
+ * Finds the first available slot in the game object instance list and initializes it.
+ *
+ * @param type The TYPE enum value of the object to create
+ * @param scale Pointer to the scale vector for the new instance
+ * @param pPos Pointer to the position vector (nullptr for zero position)
+ * @param pVel Pointer to the velocity vector (nullptr for zero velocity)
+ * @param dir Initial direction in radians
+ * @return Pointer to the created instance, or nullptr if no slots available
+ */
 GameObjInst* gameObjInstCreate(unsigned long type, AEVec2* scale, AEVec2* pPos, AEVec2* pVel, float dir)
 {
 	AEVec2 zero;
-	AEVec2Zero(&zero); // Zero'd out vector to assign data members assigned to nullptr.
+	AEVec2Zero(&zero);
+	AE_ASSERT_PARM(type < sGameObjNum);
 
-	AE_ASSERT_PARM(type < sGameObjNum); // Error message if the type of instance to be created is not of the correct type.
-
-	// loop through the object instance list to find a non-used object instance
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
 		GameObjInst* pInst = sGameObjInstList + i;
 
-		// check if current instance is not used
 		if (pInst->flag == 0)
 		{
-			// it is not used => use it to create the new instance
 			pInst->pObject = sGameObjList + type;
 			pInst->flag = FLAG_ACTIVE;
 			pInst->scale = *scale;
 			pInst->posCurr = pPos ? *pPos : zero;
 			pInst->velCurr = pVel ? *pVel : zero;
 			pInst->dirCurr = dir;
-			// return the newly created instance
 			return pInst;
 		}
 	}
-	// cannot find empty slot => return 0
-	return 0;
+	return nullptr;
 }
 
-/******************************************************************************/
-/*!
-	Function to destroy the instance of the object, by simply setting its flag to be 0.
-*/
-/******************************************************************************/
+/**
+ * @brief Destroys a game object instance
+ *
+ * Marks the instance as inactive by clearing its flag. The instance
+ * will be available for reuse by gameObjInstCreate().
+ *
+ * @param pInst Pointer to the instance to destroy
+ */
 void gameObjInstDestroy(GameObjInst* pInst)
 {
-	// if instance is destroyed before, just return
-	if (pInst->flag == 0)
+	if (pInst->flag == 0) {
 		return;
+	}
 
-	// zero out the flag
 	pInst->flag = 0;
 }
 
@@ -153,10 +157,19 @@ void gameObjInstDestroy(GameObjInst* pInst)
 
 /******************************************************************************/
 /*!
-	check for collision between Ship and Wall and apply physics response on the Ship
-		-- Apply collision response only on the "Ship" as we consider the "Wall" object is always stationary
-		-- We'll check collision only when the ship is moving towards the wall!
-	[DO NOT UPDATE THIS PARAGRAPH'S CODE]
+	@brief Check for collision between the Ship and Wall, and apply physics response on the Ship.
+
+	This function checks for a potential collision between the Ship and the Wall and applies
+	a physics response if a collision is detected. The function applies the collision response
+	only to the "Ship" object, as the "Wall" is considered stationary. Collision is checked
+	only when the Ship is moving towards the Wall.
+
+	Collision detection is performed using the dot product to determine if the Ship's velocity
+	is directed toward the Wall. If a collision is detected, the Ship's position is updated based
+	on the intersection time calculated by the `CollisionIntersection_RectRect` function, and
+	the Ship's velocity is reset.
+
+	@note The code inside this function is not to be modified as per the instructions.
 */
 /******************************************************************************/
 void Helper_Wall_Collision()
@@ -861,17 +874,27 @@ void GameStateAsteroidsDraw(void)
 		DisplayScores(players, id);
 	}
 }
+
 /******************************************************************************/
 /*!
-	Function to free all instances, essentially 'killing' them.
+	@brief Frees all active game object instances.
+
+	This function iterates through the array of game object instances and destroys
+	each active instance by calling `gameObjInstDestroy`. An instance is considered
+	active if its `flag` has the `FLAG_ACTIVE` bit set. This function ensures that
+	all active instances are properly cleaned up and memory is freed.
 */
 /******************************************************************************/
 void GameStateAsteroidsFree(void)
 {
-	// kill all object instances in the array using "gameObjInstDestroy" - by iterating through the whole array using a for loop.
+	// Iterate through all the game object instances
 	for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) {
+		// Get the current instance
 		GameObjInst* pInst = sGameObjInstList + i;
+
+		// Check if the instance is active (based on its flag)
 		if (pInst->flag & FLAG_ACTIVE) {
+			// Destroy the active instance and free associated memory
 			gameObjInstDestroy(pInst);
 		}
 	}
@@ -879,20 +902,100 @@ void GameStateAsteroidsFree(void)
 
 /******************************************************************************/
 /*!
-	Function to unload all meshes created at the start.
+	@brief Unloads all meshes created at the start.
+
+	This function iterates through all the game objects and frees the meshes
+	that were created during the initialization phase. After freeing each mesh,
+	it sets the corresponding mesh pointer to `NULL` to avoid dangling pointers.
 */
 /******************************************************************************/
 void GameStateAsteroidsUnload(void)
 {
-	for (unsigned long i = 0; i < sGameObjNum; ++i) { // Iterating through all meshes - sGameObjNum contains the number meshes created.
+	// Iterate through all the game objects and free their meshes
+	for (unsigned long i = 0; i < sGameObjNum; ++i) {
+		// Get the current game object
 		GameObj* pObject = sGameObjList + i;
-		AEGfxMeshFree(pObject->pMesh); // Freeing the mesh.
-		pObject->pMesh = NULL; // Setting it to NULL after freeing.
+
+		// Free the mesh associated with this object
+		AEGfxMeshFree(pObject->pMesh);
+
+		// Set the mesh pointer to NULL to prevent further access
+		pObject->pMesh = NULL;
 	}
 }
 
+/**
+ * @brief Retrieves the current position of the player.
+ *
+ * This function returns the final position of the player in the game world. The position
+ * is represented as a 2D vector (AEVec2) with x and y coordinates.
+ *
+ * @return AEVec2 The player's position in the game world.
+ */
+AEVec2 fetchPlayerPosition()
+{
+	return finalPlayerPosition;
+}
+
+/**
+ * @brief Retrieves the current rotation of the player.
+ *
+ * This function returns the player's rotation, which is a float representing the angle
+ * (in radians or degrees depending on the system's conventions) at which the player is facing.
+ *
+ * @return float The player's current rotation.
+ */
+float fetchPlayerRotation() {
+	return playerRotate;
+}
+
+/**
+ * @brief Retrieves the current score of the player.
+ *
+ * This function returns the player's current score. The score is an integer value that may
+ * represent points gained through actions such as destroying asteroids or completing objectives.
+ *
+ * @return int The player's current score.
+ */
+int fetchPlayerScore() {
+	return Playerscore;
+}
+
+/**
+ * @brief Retrieves the current position of the bullet.
+ *
+ * This function returns the final position of the bullet in the game world. The position is
+ * represented as a 2D vector (AEVec2) with x and y coordinates.
+ *
+ * @return AEVec2 The bullet's position in the game world.
+ */
+AEVec2 fetchBulletPosition() {
+	return finalBulletPosition;
+}
+
+/**
+ * @brief Retrieves the current rotation of the bullet.
+ *
+ * This function returns the bullet's rotation, which is a float representing the angle
+ * (in radians or degrees depending on the system's conventions) at which the bullet is moving.
+ *
+ * @return float The bullet's current rotation.
+ */
+float fetchBulletRotation() {
+	return bulletRotate;
+}
+
+/******************************************************************************/
+/*!
+	@brief Checks for collisions between bullets and asteroids.
+
+	This function iterates through all active asteroids and checks for collisions
+	with both remote (networked) and local bullets. If a collision is detected,
+	the asteroid is marked as inactive, and appropriate events are sent to the server
+	to notify about the destruction of the asteroid and the update of the player's score.
+*/
+/******************************************************************************/
 void checkBulletAsteroidCollisions() {
-	// Lock the asteroids collection for thread safety
 	std::lock_guard<std::mutex> lockAsteroids(asteroidsMutex);
 	Client::lockBullets();
 
@@ -1043,27 +1146,6 @@ void checkBulletAsteroidCollisions() {
 	}
 
 	Client::unlockBullets();
-}
-
-AEVec2 returnPlayerPosition()
-{
-	return finalPlayerPosition;
-}
-
-float returnPlayerRotation() {
-	return playerRotate;
-}
-
-int returnPlayerScore() {
-	return Playerscore;
-}
-
-AEVec2 returnBulletPosition() {
-	return finalBulletPosition;
-}
-
-float returnBulletRotation() {
-	return bulletRotate;
 }
 
 // Sync players

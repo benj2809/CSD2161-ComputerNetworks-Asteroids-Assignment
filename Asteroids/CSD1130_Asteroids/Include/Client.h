@@ -125,13 +125,13 @@ public:
 
     // Runtime control
     void run();
-    void runScript(const std::string& scriptPath);
+    void runScript(const std::string& scriptDirectory);
 
     // Server information
-    void getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port);
+    void getServerInfo(const std::string& scriptDirectory, std::string& IP, std::string& port);
 
     // Network operations
-    void sendToServerUdp();
+    void sendData();
     void sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID = "");
     void sendAsteroidDestructionEvent(const std::string& asteroidID);
     void sendScoreUpdateEvent(const std::string& pid, int score);
