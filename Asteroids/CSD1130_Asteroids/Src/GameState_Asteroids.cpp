@@ -51,7 +51,7 @@ const float			BULLET_SPEED = 400.0f;		// bullet speed (m/s)
 const float         BOUNDING_RECT_SIZE = 1.0f;         // this is the normalized bounding rectangle (width and height) sizes - AABB collision data
 
 static bool onValueChange{ true };
-float playerData::gameTimer = 60.0f;
+float PlayerData::gameTimer = 60.0f;
 bool gameOver = false;
 bool winnerAnnounced = false;
 static bool spaceDebounce = false;
@@ -148,10 +148,10 @@ std::unordered_map<int, GameObjInst*> pShips; // Player ships
 std::vector<GameObjInst*> pBullets; // Bullets fired by this player
 
 extern std::mutex asteroidsMutex;
-extern std::unordered_map<std::string, asteroidData> asteroids;
+extern std::unordered_map<std::string, AsteroidData> asteroids;
 
-extern std::unordered_map<std::string, bulletData> bullets;
-extern Client g_client;
+extern std::unordered_map<std::string, BulletData> bullets;
+extern Client globalClient;
 
 /******************************************************************************/
 /*!
@@ -341,7 +341,7 @@ void GameStateAsteroidsUpdate(void)
 	}
 
 	// Calculate delta time
-	float dt = (float)AEFrameRateControllerGetFrameTime();
+	float deltaTime = (float)AEFrameRateControllerGetFrameTime();
 
 	// If the game is over, you might want to return early to skip further game logic
 	if (gameOver && !winnerAnnounced) {
@@ -386,7 +386,7 @@ void GameStateAsteroidsUpdate(void)
 				AEVec2Normalize(&added, &added); // Normalizing the vector
 				added.x *= SHIP_ACCEL_FORWARD; // * Acceleration
 				added.y *= SHIP_ACCEL_FORWARD; // * Acceleration
-				AEVec2Scale(&added, &added, (float)AEFrameRateControllerGetFrameTime()); // * dt - Makes time-based movement, which will cover the same amount of distance regardless of frame rate.
+				AEVec2Scale(&added, &added, (float)AEFrameRateControllerGetFrameTime()); // * deltaTime - Makes time-based movement, which will cover the same amount of distance regardless of frame rate.
 				AEVec2Add(&newVel, &added, &spShip->velCurr); // * Adding everything to vector newVal
 				AEVec2Scale(&newVel, &newVel, 0.99f); // * 0.99 - This acts as 'friction', for each frame, the percentage decrease gets bigger, until it reachs 100%, which 'limits' our speed.
 				spShip->velCurr = newVel; // Assigning vector newVal to the ship's velocity.
@@ -454,19 +454,19 @@ void GameStateAsteroidsUpdate(void)
 
 					// Add to global bullets map with fromLocalPlayer flag to avoid duplication
 					Client::lockBullets();
-					bulletData bData;
+					BulletData bData;
 					bData.bulletID = bulletID;
-					bData.x = bulletPos.x;
-					bData.y = bulletPos.y;
-					bData.velX = bulletVel.x;
-					bData.velY = bulletVel.y;
-					bData.dir = spShip->dirCurr;
+					bData.X = bulletPos.x;
+					bData.X = bulletPos.y;
+					bData.velocityX = bulletVel.x;
+					bData.velocityY = bulletVel.y;
+					bData.direction = spShip->dirCurr;
 					bData.fromLocalPlayer = true; // This flag is critical!
 					bullets[bulletID] = bData;
 					Client::unlockBullets();
 
 					// Report to server
-					g_client.reportBulletCreation(bulletPos, bulletVel, spShip->dirCurr, bulletID);
+					globalClient.reportBulletCreation(bulletPos, bulletVel, spShip->dirCurr, bulletID);
 
 					std::cout << "Created local bullet with ID: " << bulletID << std::endl;
 				}
@@ -674,8 +674,8 @@ void GameStateAsteroidsUpdate(void)
 		}
 
 		// Update bullet position based on velocity
-		bullet->posCurr.x += bullet->velCurr.x * g_dt;
-		bullet->posCurr.y += bullet->velCurr.y * g_dt;
+		bullet->posCurr.x += bullet->velCurr.x * globalDeltaTime;
+		bullet->posCurr.y += bullet->velCurr.y * globalDeltaTime;
 
 		// Check if bullet is out of bounds
 		if (bullet->posCurr.x < AEGfxGetWinMinX() - BULLET_SCALE_X ||
@@ -704,8 +704,8 @@ void GameStateAsteroidsUpdate(void)
 	Client::lockBullets();
 	for (auto& pair : bullets) {
 		// Update bullet position
-		pair.second.x += pair.second.velX * g_dt;
-		pair.second.y += pair.second.velY * g_dt;
+		pair.second.X += pair.second.velocityX * globalDeltaTime;
+		pair.second.Y += pair.second.velocityY * globalDeltaTime;
 	}
 	Client::unlockBullets();
 
@@ -844,7 +844,7 @@ void checkBulletAsteroidCollisions() {
 
 	// For each asteroid, check collision with each bullet
 	for (auto& asteroidPair : asteroids) {
-		if (!asteroidPair.second.active) continue;
+		if (!asteroidPair.second.isActive) continue;
 
 		// Create asteroid AABB
 		AABB asteroidAABB;
@@ -857,8 +857,8 @@ void checkBulletAsteroidCollisions() {
 
 		// Create asteroid velocity vector
 		AEVec2 asteroidVel;
-		asteroidVel.x = asteroidPair.second.velX * 120.0f; // Match server velocity scale
-		asteroidVel.y = asteroidPair.second.velY * 120.0f;
+		asteroidVel.x = asteroidPair.second.velocityX * 120.0f; // Match server velocity scale
+		asteroidVel.y = asteroidPair.second.velocityY * 120.0f;
 
 		// Check against all bullets
 		for (auto bulletIt = bullets.begin(); bulletIt != bullets.end();) {
@@ -874,15 +874,15 @@ void checkBulletAsteroidCollisions() {
 			AABB bulletAABB;
 			float bulletHalfSizeX = BULLET_SCALE_X / 2.0f;
 			float bulletHalfSizeY = BULLET_SCALE_Y / 2.0f;
-			bulletAABB.min.x = bulletPair.second.x - bulletHalfSizeX;
-			bulletAABB.min.y = bulletPair.second.y - bulletHalfSizeY;
-			bulletAABB.max.x = bulletPair.second.x + bulletHalfSizeX;
-			bulletAABB.max.y = bulletPair.second.y + bulletHalfSizeY;
+			bulletAABB.min.x = bulletPair.second.X - bulletHalfSizeX;
+			bulletAABB.min.y = bulletPair.second.Y - bulletHalfSizeY;
+			bulletAABB.max.x = bulletPair.second.X + bulletHalfSizeX;
+			bulletAABB.max.y = bulletPair.second.Y + bulletHalfSizeY;
 
 			// Create bullet velocity vector
 			AEVec2 bulletVel;
-			bulletVel.x = bulletPair.second.velX;
-			bulletVel.y = bulletPair.second.velY;
+			bulletVel.x = bulletPair.second.velocityX;
+			bulletVel.y = bulletPair.second.velocityY;
 
 			// Check for collision
 			float tFirst = 0.0f;
@@ -896,21 +896,21 @@ void checkBulletAsteroidCollisions() {
 				//	<< " and asteroid " << asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
-				g_client.reportAsteroidDestruction(asteroidPair.first);
+				globalClient.reportAsteroidDestruction(asteroidPair.first);
 
 				// Update the player's score
 				int playerID = Client::getPlayerID();
 				if (players.find(playerID) != players.end()) {
 					players[playerID].score += 100; // Increment the player's score by 100
 
-					g_client.reportPlayerScore(players[playerID].cIP, players[playerID].score);
+					globalClient.reportPlayerScore(players[playerID].clientIP, players[playerID].score);
 				}
 
 				// Remove the bullet from the local list
 				bulletIt = bullets.erase(bulletIt);
 
 				// Mark the asteroid as inactive locally (server will confirm)
-				asteroidPair.second.active = false;
+				asteroidPair.second.isActive = false;
 
 				// Break out of bullet loop as this asteroid is now destroyed
 				goto nextAsteroid;  // Using goto to break out of nested loop
@@ -948,11 +948,11 @@ void checkBulletAsteroidCollisions() {
 				//	<< asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
-				g_client.reportAsteroidDestruction(asteroidPair.first);
+				globalClient.reportAsteroidDestruction(asteroidPair.first);
 				// Update the player's score
 				int playerID = Client::getPlayerID();
 				//Get the port number of the client 
-				SOCKET clientSocket = g_client.getSocket();
+				SOCKET clientSocket = globalClient.getSocket();
 				sockaddr_in addr;
 				int addrLen = sizeof(addr);
 				uint16_t port_out = 0;
@@ -967,14 +967,14 @@ void checkBulletAsteroidCollisions() {
 				}
 				if (players.find(playerID) != players.end()) {
 					Playerscore += 100; // Increment the player's score by 100
-					g_client.reportPlayerScore(players[playerID].cIP +":"+ std::to_string(port_out), Playerscore);
+					globalClient.reportPlayerScore(players[playerID].clientIP +":"+ std::to_string(port_out), Playerscore);
 				}
 				// Destroy the bullet game object
 				gameObjInstDestroy(bullet);
 				it = pBullets.erase(it);
 
 				// Mark the asteroid as inactive locally (server will confirm)
-				asteroidPair.second.active = false;
+				asteroidPair.second.isActive = false;
 
 				// Break out of bullet loop as this asteroid is now destroyed
 				goto nextAsteroid;
@@ -1129,7 +1129,7 @@ void Helper_Wall_Collision()
 }
 
 // Sync players
-void syncPlayers(std::unordered_map<int, playerData>& pData) {
+void syncPlayers(std::unordered_map<int, PlayerData>& pData) {
 	// Clean up any player ships that aren't in the current player data
 	for (auto it = pShips.begin(); it != pShips.end();) {
 		if (pData.find(it->first) == pData.end()) {
@@ -1163,26 +1163,26 @@ void syncPlayers(std::unordered_map<int, playerData>& pData) {
 			AEVec2 scale;
 			AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
 			AEVec2 position;
-			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
+			AEVec2Set(&position, pData[pair.first].X, pData[pair.first].Y);
 			pShips[pair.first] = gameObjInstCreate(TYPE_SHIP, &scale, &position, nullptr, 0.0f);
 		}
 		else {
 			// Update existing ship position
 			AEVec2 position;
-			AEVec2Set(&position, pData[pair.first].x, pData[pair.first].y);
+			AEVec2Set(&position, pData[pair.first].X, pData[pair.first].Y);
 			pShips[pair.first]->posCurr = position;
-			pShips[pair.first]->dirCurr = pair.second.rot;
+			pShips[pair.first]->dirCurr = pair.second.rotation;
 		}
 	}
 }
 
-void RenderPlayerNames(std::unordered_map<int, playerData>& pData) {
+void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData) {
 	for (const auto& pair : pData) {
-		const playerData& player = pair.second; // Get player data
+		const PlayerData& player = pair.second; // Get player data
 
 		AEVec2 position;
 		f32 normalizedX, normalizedY;
-		AEVec2Set(&position, player.x, player.y);
+		AEVec2Set(&position, player.X, player.Y);
 
 		// Wrap the position to the window bounds
 		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
@@ -1230,7 +1230,7 @@ void renderServerAsteroids() {
 		// Debug print for asteroid positions - uncomment if needed
 		// std::cout << "Asteroid " << id << " at (" << asteroid.currentX << ", " << asteroid.currentY << ")" << std::endl;
 
-		if (!asteroid.active) continue;
+		if (!asteroid.isActive) continue;
 
 		// Create a temporary asteroid instance for rendering
 		AEVec2 scale;
@@ -1240,7 +1240,7 @@ void renderServerAsteroids() {
 		// Use the interpolated position for rendering
 		AEVec2Set(&scale, asteroid.scaleX, asteroid.scaleY);
 		AEVec2Set(&pos, asteroid.currentX, asteroid.currentY);
-		AEVec2Set(&vel, asteroid.velX, asteroid.velY);
+		AEVec2Set(&vel, asteroid.velocityX, asteroid.velocityY);
 
 		// Create the asteroid object instance
 		GameObjInst* pInst = gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
@@ -1271,14 +1271,14 @@ void renderServerAsteroids() {
 	}
 }
 
-void DisplayScores(const std::unordered_map<int, playerData>& players, int playerID) {
+void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID) {
 	for (const auto& pair : players) {
-		const playerData& player = pair.second; // Get player data
+		const PlayerData& player = pair.second; // Get player data
 
 		// Positioning
 		AEVec2 position;
 		f32 normalizedX, normalizedY;
-		AEVec2Set(&position, player.x, player.y);
+		AEVec2Set(&position, player.X, player.Y);
 
 		// Wrap the position to the window bounds
 		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
@@ -1325,7 +1325,7 @@ void renderNetworkBullets() {
 
 	// Access the bullets map directly (it should be an extern variable)
 	for (const auto& pair : bullets) {
-		const bulletData& bullet = pair.second;
+		const BulletData& bullet = pair.second;
 
 		// Skip bullets from the local player (already rendered locally)
 		if (bullet.fromLocalPlayer) {
@@ -1338,11 +1338,11 @@ void renderNetworkBullets() {
 		AEVec2 vel;
 
 		AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y);
-		AEVec2Set(&pos, bullet.x, bullet.y);
-		AEVec2Set(&vel, bullet.velX, bullet.velY);
+		AEVec2Set(&pos, bullet.X, bullet.Y);
+		AEVec2Set(&vel, bullet.velocityX, bullet.velocityY);
 
 		// Create the bullet object instance
-		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.dir);
+		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.direction);
 
 		// Skip if creation failed
 		if (!pInst) continue;
@@ -1350,7 +1350,7 @@ void renderNetworkBullets() {
 		// Set the position and direction explicitly
 		pInst->posCurr.x = pos.x;
 		pInst->posCurr.y = pos.y;
-		pInst->dirCurr = bullet.dir;
+		pInst->dirCurr = bullet.direction;
 
 		// Calculate the transform matrix for rendering
 		AEMtx33 trans, rot, scaleMtx;

@@ -65,7 +65,7 @@ bool CollisionIntersection_RectRect(const AABB& aabb1,          //Input
 
 
 	float t_first = 0;
-	float t_last = g_dt;
+	float t_last = globalDeltaTime;
 
 	// for x axis
 	//case for vel < 0;

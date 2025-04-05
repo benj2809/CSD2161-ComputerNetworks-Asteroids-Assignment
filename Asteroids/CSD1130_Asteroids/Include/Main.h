@@ -24,20 +24,19 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 //------------------------------------
 // Globals
 
-extern float	g_dt;
-extern double	g_appTime;
+extern float	globalDeltaTime;
+extern double	globalAppTime;
 
 // ---------------------------------------------------------------------------
 // includes
 
 #include "AEEngine.h"
-#include "Math.h"
-
 #include "GameStateMgr.h"
 #include "GameState_Asteroids.h"
+#include "Math.h"
 #include "Collision.h"
 #include "Client.h"
-extern s8	fontId;
+extern s8 fontId;
 #endif
 
 

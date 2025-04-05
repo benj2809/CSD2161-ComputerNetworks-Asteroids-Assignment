@@ -57,9 +57,9 @@ void updateAsteroidInterpolation();
 void checkBulletAsteroidCollisions();
 //
 
-void syncPlayers(std::unordered_map<int, playerData>& pData);
-void RenderPlayerNames(std::unordered_map<int, playerData>& pData);
-void DisplayScores(const std::unordered_map<int, playerData>& players, int playerID);
+void syncPlayers(std::unordered_map<int, PlayerData>& pData);
+void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData);
+void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID);
 
 // ---------------------------------------------------------------------------
 

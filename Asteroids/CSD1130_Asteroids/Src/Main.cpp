@@ -24,10 +24,10 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 
 // ---------------------------------------------------------------------------
 // Globals
-float	 g_dt;
-double	 g_appTime;
+float	 globalDeltaTime;
+double	 globalAppTime;
 s8       fontId;
-Client g_client;  // Global client object
+Client   globalClient;  // Global client object
 
 
 /******************************************************************************/
@@ -63,9 +63,9 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 	fontId = AEGfxCreateFont("../Resources/Fonts/Arial Italic.ttf", 20);
 	
 	// Initialize & run client
-	g_client.getServerInfo(path, serverIP, server_Port);
+	globalClient.getServerInfo(path, serverIP, server_Port);
 	serverPort = static_cast<uint16_t>(std::stoul(server_Port));
-	if (!g_client.initialize(serverIP, serverPort)) {
+	if (!globalClient.initialize(serverIP, serverPort)) {
 		std::cerr << "Client initialization failed." << std::endl;
 		return 1;
 	}
@@ -91,7 +91,7 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 				AESysFrameStart();
 
 				GameStateUpdate();
-				g_client.run();
+				globalClient.run();
 
 				GameStateDraw();
 
@@ -101,8 +101,8 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 				if ((AESysDoesWindowExist() == false) || AEInputCheckTriggered(AEVK_ESCAPE))
 					gGameStateNext = GS_QUIT;
 
-				g_dt = (f32)AEFrameRateControllerGetFrameTime();
-				g_appTime += g_dt;
+				globalDeltaTime = (f32)AEFrameRateControllerGetFrameTime();
+				globalAppTime += globalDeltaTime;
 		}
 		
 		GameStateFree();

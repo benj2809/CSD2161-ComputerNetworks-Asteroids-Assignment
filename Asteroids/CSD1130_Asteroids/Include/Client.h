@@ -16,173 +16,161 @@ Technology is prohibited.
 /* End Header **************************************************************************/
 #pragma once
 
-// Critical defines MUST come first
+// Windows headers configuration
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define NOMINMAX
 
-// EXACT inclusion order
+// System includes (grouped and ordered logically)
+#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>  // Must come after Winsock2
 #pragma comment(lib, "ws2_32.lib")
 
-#include "AEEngine.h" // Include for AEVec2 type
+// Engine includes
+#include "AEEngine.h"
 
-// 3. Standard C++ headers
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <thread>
-#include <mutex>
+// Standard library includes
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <mutex>
 #include <sstream>
-#include <unordered_set>
+#include <string>
+#include <thread>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
+/* ======================= DATA STRUCTURES ======================= */
+
+/**
+ * @brief Structure for UDP communication data
+ */
 struct UdpClientData {
-    sockaddr_in clientAddr;
-    char data[1024];  // Buffer for incoming data
-    int dataSize;     // Size of the incoming data
+    sockaddr_in clientAddr;  ///< Client address information
+    char data[1024];        ///< Data buffer
+    int dataSize;           ///< Size of received data
 };
 
 /**
- * Client class that encapsulates all client functionality.
- * Manages socket connection, network I/O, and user interaction.
+ * @brief Player data structure
+ */
+struct PlayerData {
+    int playerID;           ///< Unique player identifier
+    float X, Y, rotation;       ///< Position and rotation
+    std::string clientIP;       ///< Client IP address
+    int score;             ///< Current game score
+    static float gameTimer; ///< Shared game timer
+};
+
+/**
+ * @brief Bullet data structure
+ */
+struct BulletData {
+    std::string bulletID;      ///< Unique bullet identifier
+    float X, Y;                     ///< Current position
+    float velocityX, velocityY;         ///< Velocity components
+    float direction;                ///< Movement direction
+    bool fromLocalPlayer;     ///< Flag for locally created bullets
+};
+
+/**
+ * @brief Asteroid data structure with interpolation support
+ */
+struct AsteroidData {
+    int asteroidID;                          ///< Unique asteroid identifier
+    float X, Y;                             ///< Server-reported position
+    float velocityX, velocityY;                       ///< Velocity components
+    float scaleX, scaleY;                   ///< Size scaling factors
+    bool isActive;                            ///< Active state flag
+    float targetX, targetY;                 ///< Target position from server
+    float currentX, currentY;               ///< Interpolated render position
+    std::chrono::steady_clock::time_point lastUpdateTime; ///< Last update timestamp
+    std::chrono::steady_clock::time_point creationTime;   ///< Creation timestamp
+};
+
+// Global game state declarations
+extern std::unordered_map<int, PlayerData> players;
+extern std::unordered_map<std::string, BulletData> bullets;
+extern std::unordered_map<std::string, AsteroidData> asteroids;
+extern std::mutex asteroidsMutex;
+
+/* ======================= CLIENT CLASS ======================= */
+
+/**
+ * @brief Network client for multiplayer game
+ *
+ * Handles all network communication with the game server,
+ * manages player data synchronization, and provides thread-safe
+ * access to game state.
  */
 class Client {
 public:
-    // Default constructor
     Client() = default;
-
-    // Destructor - ensures proper cleanup of resources
     ~Client() { cleanup(); }
 
-    /**
-     * Initialize the client with server connection details
-     * @param serverIP The IP address of the server to connect to
-     * @param serverPort The port number of the server
-     * @return true if initialization successful, false otherwise
-     */
+    /* ========== PUBLIC INTERFACE ========== */
+
+    // Initialization
     bool initialize(const std::string& serverIP, uint16_t serverPort);
 
-    /**
-     * Run the client in interactive mode - handles user input and network operations
-     */
+    // Runtime control
     void run();
-
-    /**
-     * Run the client in script mode - reads commands from a file
-     * @param scriptPath Path to the script file containing commands
-     */
     void runScript(const std::string& scriptPath);
+
+    // Server information
     void getServerInfo(const std::string& scriptPath, std::string& IP, std::string& port);
+
+    // Network operations
     void sendToServerUdp();
-
-    static void displayPlayerScores();
-
-    // Get player count
-    static const int getPlayerCount() { return pCount; }
-
-    // Get player ID for this client
-    static const int getPlayerID() { return playerID; }
-    SOCKET getSocket() { return clientSocket; }
-    // Get bullets data safely with locking
-    static void lockBullets() { bulletsMutex.lock(); }
-    static void unlockBullets() { bulletsMutex.unlock(); }
-
-    void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID = "");
+    void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir,
+        const std::string& bulletID = "");
     void reportAsteroidDestruction(const std::string& asteroidID);
     void reportPlayerScore(const std::string& playerID, int score);
 
+    // Thread synchronization
+    static void lockBullets() { bulletsMutex.lock(); }
+    static void unlockBullets() { bulletsMutex.unlock(); }
+
+    // Accessors
+    static void displayPlayerScores();
+    static int getPlayerCount() { return playerCount; }
+    static int getPlayerID() { return playerID; }
+    SOCKET getSocket() const { return clientSocket; }
+
 private:
-    SOCKET clientSocket = INVALID_SOCKET;  // Socket handle for server connection
-    static std::mutex mutex;                      // Mutex for thread synchronization
-    std::string serverIP;                  // Server IP address
-    uint16_t serverPort;                   // Server port number
+    /* ========== PRIVATE IMPLEMENTATION ========== */
 
-    static std::mutex bulletsMutex;  // Mutex for thread-safe access to bullets
-
-    // Player count
-    static size_t pCount;
-
-    // Player ID
-    static int playerID;
-
-    /**
-     * Initialize the Winsock library
-     * @return true if successful, false otherwise
-     */
+    // Network setup
     bool setupWinsock();
-
-    /**
-     * Resolve server address using DNS
-     * @param serverIP Server IP address
-     * @param serverPort Server port number
-     * @return true if address resolution successful, false otherwise
-     */
     bool resolveAddress(const std::string& serverIP, uint16_t serverPort);
-
-    /**
-     * Create a TCP socket
-     * @return true if socket creation successful, false otherwise
-     */
     bool createSocket();
-
-    /**
-     * Connect to the server using the stored IP and port
-     * @return true if connection successful, false otherwise
-     */
     bool connectToServer();
 
-    /**
-     * Thread function to handle network operations
-     * Continuously receives and processes data from the server
-     */
+    // Network handling
     void handleNetwork();
-
-    /**
-     * Clean up resources (sockets, Winsock) on exit
-     */
     void cleanup();
+
+    // Data processing helpers
+    void processAsteroidData(const std::string& data);
+    void processBulletData(const std::string& data);
+    void processScoreUpdate(const std::string& data);
+    void processPlayerData(const std::string& data);
+    void sendServerMessage(const std::string& message);
+
+    /* ========== MEMBER VARIABLES ========== */
+    SOCKET clientSocket = INVALID_SOCKET;  ///< Network socket handle
+    std::string serverIP;                  ///< Server IP address
+    uint16_t serverPort;                   ///< Server port number
+
+    // Static members
+    static std::mutex playersMutex;               ///< General-purpose mutex
+    static std::mutex bulletsMutex;        ///< Bullet data mutex
+    static size_t playerCount;                  ///< Player count
+    static int playerID;                   ///< This client's player ID
 };
-
-struct playerData {
-    int playerID;
-    float x, y, rot;		// Position
-    std::string cIP;
-    int score;
-    static float gameTimer;
-    // std::chrono::steady_clock::time_point lastActive; // Last time the player sent data
-};
-
-struct bulletData {
-    std::string bulletID;
-    float x, y;              // Position
-    float velX, velY;        // Velocity
-    float dir;               // Direction
-    bool fromLocalPlayer;    // Flag to identify locally created bullets
-};
-
-struct asteroidData {
-    int asteroidID;
-    float x, y;          // Position
-    float velX, velY;    // Velocity
-    float scaleX, scaleY;// Scale
-    bool active;         // Whether the asteroid is active
-    float targetX, targetY;  // Target position from server 
-    float currentX, currentY;// Interpolated position for rendering
-    std::chrono::steady_clock::time_point lastUpdateTime; // Last update time
-    std::chrono::steady_clock::time_point creationTime;   // When the asteroid was created
-};
-
-
-extern std::unordered_map<int, playerData> players;
-extern std::unordered_map<std::string, bulletData> bullets;
-extern std::unordered_map<std::string, asteroidData> asteroids;
-extern std::mutex asteroidsMutex;
