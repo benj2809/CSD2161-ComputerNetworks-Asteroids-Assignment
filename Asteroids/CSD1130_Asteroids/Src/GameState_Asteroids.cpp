@@ -1249,11 +1249,6 @@ void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int p
 	}
 }
 
-void sendGameScoreToServer(int playerID, int score)
-{
-
-}
-
 void renderNetworkBullets() {
 	// Use Client's lock/unlock methods instead of trying to access the mutex directly
 	Client::lockBullets();
