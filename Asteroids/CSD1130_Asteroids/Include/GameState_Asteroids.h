@@ -54,6 +54,6 @@ void checkBulletAsteroidCollisions();
 // Multiplayer sync
 void synchronizeShips(std::unordered_map<int, PlayerData>& pData);
 void renderNames(std::unordered_map<int, PlayerData>& pData);
-void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID);
+void displayScores();
 
 #endif

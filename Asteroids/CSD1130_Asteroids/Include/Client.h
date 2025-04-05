@@ -125,7 +125,7 @@ public:
 
     // Runtime control
     void run();
-    void runScript(const std::string& scriptDirectory);
+    void runScript();
 
     // Server information
     void getServerInfo(const std::string& scriptDirectory, std::string& IP, std::string& port);

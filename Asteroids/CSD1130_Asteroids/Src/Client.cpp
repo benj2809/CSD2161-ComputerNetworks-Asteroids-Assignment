@@ -137,7 +137,7 @@ void Client::run() {
  * @brief Runs the client in script mode
  * @param scriptDirectory Path to the script file containing commands
  */
-void Client::runScript(const std::string& scriptDirectory) {
+void Client::runScript() {
     std::thread(&Client::receiveNetworkMessages, this).detach();
     sendData();
 }

@@ -83,13 +83,13 @@ static GameObj sGameObjList[GAME_OBJ_NUM_MAX];
 static unsigned long sGameObjNum;
 static GameObjInst sGameObjInstList[GAME_OBJ_INST_NUM_MAX];
 static unsigned long sGameObjInstNum;
-static GameObjInst* spShip;
-static GameObjInst* spWall;
-static long sShipLives;
-static unsigned long sScore;
+static GameObjInst* ship;
+static GameObjInst* wall;
+static long shipLives;
+static unsigned long shipScore;
 
 // Multiplayer objects
-std::unordered_map<int, GameObjInst*> pShips;
+std::unordered_map<int, GameObjInst*> shipMap;
 std::vector<GameObjInst*> pBullets;
 extern std::mutex asteroidsMutex;
 extern std::unordered_map<std::string, AsteroidData> asteroids;
@@ -176,50 +176,46 @@ void Helper_Wall_Collision()
 {
 	//calculate the vectors between the previous position of the ship and the boundary of wall
 	AEVec2 vec1{};
-	vec1.x = spShip->posPrev.x - spWall->boundingBox.min.x;
-	vec1.y = spShip->posPrev.y - spWall->boundingBox.min.y;
+	vec1.x = ship->posPrev.x - wall->boundingBox.min.x;
+	vec1.y = ship->posPrev.y - wall->boundingBox.min.y;
 	AEVec2 vec2{};
 	vec2.x = 0.0f;
 	vec2.y = -1.0f;
 	AEVec2 vec3{};
-	vec3.x = spShip->posPrev.x - spWall->boundingBox.max.x;
-	vec3.y = spShip->posPrev.y - spWall->boundingBox.max.y;
+	vec3.x = ship->posPrev.x - wall->boundingBox.max.x;
+	vec3.y = ship->posPrev.y - wall->boundingBox.max.y;
 	AEVec2 vec4{};
 	vec4.x = 1.0f;
 	vec4.y = 0.0f;
 	AEVec2 vec5{};
-	vec5.x = spShip->posPrev.x - spWall->boundingBox.max.x;
-	vec5.y = spShip->posPrev.y - spWall->boundingBox.max.y;
+	vec5.x = ship->posPrev.x - wall->boundingBox.max.x;
+	vec5.y = ship->posPrev.y - wall->boundingBox.max.y;
 	AEVec2 vec6{};
 	vec6.x = 0.0f;
 	vec6.y = 1.0f;
 	AEVec2 vec7{};
-	vec7.x = spShip->posPrev.x - spWall->boundingBox.min.x;
-	vec7.y = spShip->posPrev.y - spWall->boundingBox.min.y;
+	vec7.x = ship->posPrev.x - wall->boundingBox.min.x;
+	vec7.y = ship->posPrev.y - wall->boundingBox.min.y;
 	AEVec2 vec8{};
 	vec8.x = -1.0f;
 	vec8.y = 0.0f;
 	if (
-		(AEVec2DotProduct(&vec1, &vec2) >= 0.0f) && (AEVec2DotProduct(&spShip->velCurr, &vec2) <= 0.0f) ||
-		(AEVec2DotProduct(&vec3, &vec4) >= 0.0f) && (AEVec2DotProduct(&spShip->velCurr, &vec4) <= 0.0f) ||
-		(AEVec2DotProduct(&vec5, &vec6) >= 0.0f) && (AEVec2DotProduct(&spShip->velCurr, &vec6) <= 0.0f) ||
-		(AEVec2DotProduct(&vec7, &vec8) >= 0.0f) && (AEVec2DotProduct(&spShip->velCurr, &vec8) <= 0.0f)
+		(AEVec2DotProduct(&vec1, &vec2) >= 0.0f) && (AEVec2DotProduct(&ship->velCurr, &vec2) <= 0.0f) ||
+		(AEVec2DotProduct(&vec3, &vec4) >= 0.0f) && (AEVec2DotProduct(&ship->velCurr, &vec4) <= 0.0f) ||
+		(AEVec2DotProduct(&vec5, &vec6) >= 0.0f) && (AEVec2DotProduct(&ship->velCurr, &vec6) <= 0.0f) ||
+		(AEVec2DotProduct(&vec7, &vec8) >= 0.0f) && (AEVec2DotProduct(&ship->velCurr, &vec8) <= 0.0f)
 		)
 	{
 		float firstTimeOfCollision = 0.0f;
-		if (CollisionIntersection_RectRect(spShip->boundingBox,
-			spShip->velCurr,
-			spWall->boundingBox,
-			spWall->velCurr,
-			firstTimeOfCollision)) // Documentation for CollisionIntersection_RectRect found in Collision.cpp.
+		if (CollisionIntersection_RectRect(ship->boundingBox, ship->velCurr, wall->boundingBox, wall->velCurr, firstTimeOfCollision)) // Documentation for CollisionIntersection_RectRect found in Collision.cpp.
 		{
 			//re-calculating the new position based on the collision's intersection time
-			spShip->posCurr.x = spShip->velCurr.x * (float)firstTimeOfCollision + spShip->posPrev.x;
-			spShip->posCurr.y = spShip->velCurr.y * (float)firstTimeOfCollision + spShip->posPrev.y;
+			ship->posCurr.x = ship->velCurr.x * (float)firstTimeOfCollision + ship->posPrev.x;
+			ship->posCurr.y = ship->velCurr.y * (float)firstTimeOfCollision + ship->posPrev.y;
 
 			//reset ship velocity
-			spShip->velCurr.x = 0.0f;
-			spShip->velCurr.y = 0.0f;
+			ship->velCurr.x = 0.0f;
+			ship->velCurr.y = 0.0f;
 		}
 	}
 }
@@ -244,8 +240,8 @@ void GameStateAsteroidsLoad(void)
 	sGameObjInstNum = 0;
 
 	// The ship object instance hasn't been created yet.
-	spShip = nullptr;
-	spWall = nullptr;
+	ship = nullptr;
+	wall = nullptr;
 
 	// Create the ship shape mesh.
 	pObj = sGameObjList + sGameObjNum++;
@@ -309,12 +305,12 @@ void GameStateAsteroidsLoad(void)
 void GameStateAsteroidsInit(void)
 {
 	// Clear existing ships and bullets.
-	for (auto it = pShips.begin(); it != pShips.end(); ++it) {
+	for (auto it = shipMap.begin(); it != shipMap.end(); ++it) {
 		if (it->second) {
 			gameObjInstDestroy(it->second);
 		}
 	}
-	pShips.clear();
+	shipMap.clear();
 
 	for (auto it = pBullets.begin(); it != pBullets.end(); ++it) {
 		if (*it) {
@@ -326,12 +322,12 @@ void GameStateAsteroidsInit(void)
 	// Create the main ship instance.
 	AEVec2 scale;
 	AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
-	spShip = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
-	AE_ASSERT(spShip);
+	ship = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
+	AE_ASSERT(ship);
 
 	// Reset score and lives.
-	sScore = 0;
-	sShipLives = SHIP_INITIAL_NUM;
+	shipScore = 0;
+	shipLives = SHIP_INITIAL_NUM;
 }
 
 /******************************************************************************/ 
@@ -428,104 +424,84 @@ void GameStateAsteroidsUpdate(void)
 		return;  // Exit early to skip the rest of the game logic
 	}
 
-	if (!(sScore >= 5000)) {
-		if (!(sShipLives < 0)) {
-			if (AEInputCheckCurr(AEVK_UP)) // Moving forward
-			{
-				AEVec2 added, newVel{}, newPos{};
-				AEVec2Set(&added, cosf(spShip->dirCurr), sinf(spShip->dirCurr)); // Creating vector of the direction of the acceleration.
-				AEVec2Normalize(&added, &added); // Normalizing the vector
-				added.x *= SHIP_ACCEL_FORWARD; // * Acceleration
-				added.y *= SHIP_ACCEL_FORWARD; // * Acceleration
-				AEVec2Scale(&added, &added, (float)AEFrameRateControllerGetFrameTime()); // * deltaTime - Makes time-based movement, which will cover the same amount of distance regardless of frame rate.
-				AEVec2Add(&newVel, &added, &spShip->velCurr); // * Adding everything to vector newVal
-				AEVec2Scale(&newVel, &newVel, 0.99f); // * 0.99 - This acts as 'friction', for each frame, the percentage decrease gets bigger, until it reachs 100%, which 'limits' our speed.
-				spShip->velCurr = newVel; // Assigning vector newVal to the ship's velocity.
+	// Only process input if the player hasn't won or lost yet
+	if (shipScore < 5000 && shipLives >= 0) {
+
+		// --- Movement: Forward ---
+		if (AEInputCheckCurr(AEVK_UP)) {
+			AEVec2 accelerationDir, newVelocity{};
+			AEVec2Set(&accelerationDir, cosf(ship->dirCurr), sinf(ship->dirCurr));
+			AEVec2Normalize(&accelerationDir, &accelerationDir);
+			AEVec2Scale(&accelerationDir, &accelerationDir, SHIP_ACCEL_FORWARD * (f32)AEFrameRateControllerGetFrameTime());
+			AEVec2Add(&newVelocity, &accelerationDir, &ship->velCurr);
+			AEVec2Scale(&newVelocity, &newVelocity, 0.99f); // Apply damping
+			ship->velCurr = newVelocity;
+		}
+
+		// --- Movement: Backward ---
+		if (AEInputCheckCurr(AEVK_DOWN)) {
+			AEVec2 reverseDir, newVelocity{};
+			AEVec2Set(&reverseDir, cosf(ship->dirCurr), sinf(ship->dirCurr));
+			AEVec2Normalize(&reverseDir, &reverseDir);
+			AEVec2Scale(&reverseDir, &reverseDir, -SHIP_ACCEL_BACKWARD * (f32)AEFrameRateControllerGetFrameTime());
+			AEVec2Add(&newVelocity, &reverseDir, &ship->velCurr);
+			AEVec2Scale(&newVelocity, &newVelocity, 0.99f);
+			ship->velCurr = newVelocity;
+		}
+
+		// --- Rotation: Left ---
+		if (AEInputCheckCurr(AEVK_LEFT)) {
+			ship->dirCurr += SHIP_ROT_SPEED * (f32)AEFrameRateControllerGetFrameTime();
+			ship->dirCurr = AEWrap(ship->dirCurr, -PI, PI);
+		}
+
+		// --- Rotation: Right ---
+		if (AEInputCheckCurr(AEVK_RIGHT)) {
+			ship->dirCurr -= SHIP_ROT_SPEED * (f32)AEFrameRateControllerGetFrameTime();
+			ship->dirCurr = AEWrap(ship->dirCurr, -PI, PI);
+		}
+
+		// --- Shooting ---
+		if (AEInputCheckTriggered(AEVK_SPACE) && !spaceDebounce) {
+			spaceDebounce = true;
+
+			AEVec2 bulletDir;
+			AEVec2Set(&bulletDir, cosf(ship->dirCurr), sinf(ship->dirCurr));
+
+			AEVec2 bulletVelocity;
+			AEVec2Scale(&bulletVelocity, &bulletDir, BULLET_SPEED);
+
+			AEVec2 bulletSpawnPos, shipNose;
+			AEVec2Scale(&shipNose, &bulletDir, SHIP_SCALE_X * 0.5f);
+			AEVec2Add(&bulletSpawnPos, &ship->posCurr, &shipNose);
+
+			AEVec2 bulletScale;
+			AEVec2Set(&bulletScale, BULLET_SCALE_X, BULLET_SCALE_Y);
+
+			GameObjInst* newBullet = gameObjInstCreate(TYPE_BULLET, &bulletScale, &bulletSpawnPos, &bulletVelocity, ship->dirCurr);
+
+			if (newBullet) {
+				std::string uniqueBulletID = std::to_string(Client::getPlayerID()) + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+
+				pBullets.push_back(newBullet);
+
+				Client::lockBullets();
+				BulletData bulletInfo;
+				bulletInfo.bulletID = uniqueBulletID;
+				bulletInfo.X = bulletSpawnPos.x;
+				bulletInfo.Y = bulletSpawnPos.y;
+				bulletInfo.velocityX = bulletVelocity.x;
+				bulletInfo.velocityY = bulletVelocity.y;
+				bulletInfo.direction = ship->dirCurr;
+				bulletInfo.fromLocalPlayer = true;
+				bullets[uniqueBulletID] = bulletInfo;
+				Client::unlockBullets();
+
+				globalClient.sendBulletCreationEvent(bulletSpawnPos, bulletVelocity, ship->dirCurr, uniqueBulletID);
 			}
-
-			if (AEInputCheckCurr(AEVK_DOWN)) // Moving backwards - The steps below are similar to the steps for forward movement.
-			{								 //                    One change is that we negate the acceleration, which results in moving the opposite direction.
-				AEVec2 added{}, newVel{};
-				AEVec2Set(&added, cosf(spShip->dirCurr), sinf(spShip->dirCurr));
-				AEVec2Normalize(&added, &added);
-				added.x *= -SHIP_ACCEL_BACKWARD;
-				added.y *= -SHIP_ACCEL_BACKWARD;
-				AEVec2Scale(&added, &added, (float)AEFrameRateControllerGetFrameTime());
-				AEVec2Add(&newVel, &added, &spShip->velCurr);
-				AEVec2Scale(&newVel, &newVel, 0.99f);
-				spShip->velCurr = newVel;
-			}
-
-			if (AEInputCheckCurr(AEVK_LEFT)) // Rotating the ship anti-clockwise.
-			{
-				spShip->dirCurr += SHIP_ROT_SPEED * (float)(AEFrameRateControllerGetFrameTime());
-				spShip->dirCurr = AEWrap(spShip->dirCurr, -PI, PI);
-			}
-
-			if (AEInputCheckCurr(AEVK_RIGHT)) // Rotating the ship clockwise.
-			{
-				spShip->dirCurr -= SHIP_ROT_SPEED * (float)(AEFrameRateControllerGetFrameTime());
-				spShip->dirCurr = AEWrap(spShip->dirCurr, -PI, PI);
-			}
-
-
-			// Shoot a bullet if space is triggered (Create a new object instance)
-// Shoot a bullet if space is triggered (Create a new object instance)
-			if (AEInputCheckTriggered(AEVK_SPACE) && !spaceDebounce) {
-				spaceDebounce = true; // Set debounce flag to prevent multiple bullets
-
-				// Create a bullet in the direction the ship is facing
-				AEVec2 bulletDir;
-				AEVec2Set(&bulletDir, cosf(spShip->dirCurr), sinf(spShip->dirCurr));
-
-				// Calculate bullet velocity
-				AEVec2 bulletVel;
-				AEVec2Scale(&bulletVel, &bulletDir, BULLET_SPEED);
-
-				// Calculate bullet starting position (at the front of the ship)
-				AEVec2 bulletPos;
-				AEVec2 shipFront;
-				AEVec2Scale(&shipFront, &bulletDir, SHIP_SCALE_X * 0.5f);
-				AEVec2Add(&bulletPos, &spShip->posCurr, &shipFront);
-
-				// Create bullet scale
-				AEVec2 bulletScale;
-				AEVec2Set(&bulletScale, BULLET_SCALE_X, BULLET_SCALE_Y);
-
-				// Create the bullet game object
-				GameObjInst* bullet = gameObjInstCreate(TYPE_BULLET, &bulletScale, &bulletPos, &bulletVel, spShip->dirCurr);
-
-				if (bullet) {
-					// Generate a unique ID for the bullet
-					std::string bulletID = std::to_string(Client::getPlayerID()) + "_" +
-						std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-
-					// Add to local bullet list
-					pBullets.push_back(bullet);
-
-					// Add to global bullets map with fromLocalPlayer flag to avoid duplication
-					Client::lockBullets();
-					BulletData bData;
-					bData.bulletID = bulletID;
-					bData.X = bulletPos.x;
-					bData.X = bulletPos.y;
-					bData.velocityX = bulletVel.x;
-					bData.velocityY = bulletVel.y;
-					bData.direction = spShip->dirCurr;
-					bData.fromLocalPlayer = true; // This flag is critical!
-					bullets[bulletID] = bData;
-					Client::unlockBullets();
-
-					// Report to server
-					globalClient.sendBulletCreationEvent(bulletPos, bulletVel, spShip->dirCurr, bulletID);
-
-					std::cout << "Created local bullet with ID: " << bulletID << std::endl;
-				}
-			}
-			else if (!AEInputCheckCurr(AEVK_SPACE)) {
-				// Reset debounce flag when space is released
-				spaceDebounce = false;
-			}
+		}
+		else if (!AEInputCheckCurr(AEVK_SPACE)) {
+			spaceDebounce = false;
 		}
 	}
 
@@ -575,8 +551,8 @@ void GameStateAsteroidsUpdate(void)
 	//======================================================================
 	//check for dynamic-dynamic collisions [AA-BB] 
 	//======================================================================
-	if (!(sScore >= 5000)) { // Just like movement, collision only takes place when the game is active.
-		if (!(sShipLives < 0)) {
+	if (!(shipScore >= 5000)) { // Just like movement, collision only takes place when the game is active.
+		if (!(shipLives < 0)) {
 			for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) { // For loop 1: This will iterate for each game object instance.
 				GameObjInst* pInst = sGameObjInstList + i; // To access each game object instance...
 				if ((pInst->flag & FLAG_ACTIVE) == 0) continue; // If the instance is not active (indicated by pInst->flag, which is 1 when the instance is active), continue to the next iteration.
@@ -589,16 +565,15 @@ void GameStateAsteroidsUpdate(void)
 						float tFirst = 0.0f;
 
 						if (NewpInst->pObject->type == TYPE_SHIP) { // If the current instance is the ship, check for collision.
-							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
-								spShip->boundingBox, spShip->velCurr,
+							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr, ship->boundingBox, ship->velCurr,
 								tFirst)) { // This if condition checks between the min & max for the SHIP x/y coordinates against the ASTEROID																																																										// It is important to check for both ASTEROID - SHIP and SHIP - ASTEROID collisions, this confirms there is a collision b/w both objects																																																						// If either one of the checks is to be omitted, the will be a case where no collision is detected when either object is WITHIN the other.
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision																																									
-								gameObjInstDestroy(spShip); // Likewise destroy the ship
+								gameObjInstDestroy(ship); // Likewise destroy the ship
 								AEVec2 scale{ SHIP_SCALE_X, SHIP_SCALE_Y }; // The following vectors are the initial vectors for the ship.
-								spShip = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
+								ship = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
 								AEVec2 scale2{ (f32)(rand() % (60 - 10 + 1) + 10) , (f32)(rand() % (60 - 10 + 1) + 10) }, pos{ (f32)(rand() % (900 - (-500) + 1) + (-500)), 400.f }, vel{ (f32)(rand() % (100 - (-100) + 1) + (-100)),  (f32)(rand() % (100 - (-100) + 1) + (-100)) };
 								gameObjInstCreate(TYPE_ASTEROID, &scale2, &pos, &vel, 0.0f); // Creating a new ship at the the center of the screen.
-								--sShipLives; // Decrement ship lives
+								--shipLives; // Decrement ship lives
 								onValueChange = true; // Setting this to true to print to the user their current score and amount of ship lives left.
 							}
 						}
@@ -620,7 +595,7 @@ void GameStateAsteroidsUpdate(void)
 								AEVec2Scale(&pos, &pos, -1.f); // Modifying position for the 2nd ASTEROID
 								AEVec2Scale(&vel, &vel, -1.3f); // Modifying velocity for the 2nd ASTEROID
 								gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f); // Creating a new ASTEROID with modified values. 
-								sScore += 100; // Incrementing the score.
+								shipScore += 100; // Incrementing the score.
 								onValueChange = true; // Setting to print the current score and number of ship lives left.
 							}
 						}
@@ -706,8 +681,8 @@ void GameStateAsteroidsUpdate(void)
 		if (pair.second.playerID != Client::getPlayerID()) {
 			continue;
 		}
-		finalPlayerPosition = { spShip->posCurr.x, spShip->posCurr.y };
-		playerRotate = spShip->dirCurr;
+		finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
+		playerRotate = ship->dirCurr;
 		break;
 	}
 
@@ -767,8 +742,8 @@ void GameStateAsteroidsUpdate(void)
 	for (const auto& pair : players) {
 		if (pair.second.playerID == Client::getPlayerID()) {
 			// Update our local position reference but keep using spShip for local control
-			finalPlayerPosition = { spShip->posCurr.x, spShip->posCurr.y };
-			playerRotate = spShip->dirCurr;
+			finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
+			playerRotate = ship->dirCurr;
 
 			// Get the current score from the server data
 			Playerscore = pair.second.score;
@@ -788,8 +763,6 @@ void GameStateAsteroidsUpdate(void)
 /******************************************************************************/
 void GameStateAsteroidsDraw(void)
 {
-	char strBuffer[1024]; /**< Buffer for score and ship lives display. */
-
 	// Set up rendering settings
 	AEGfxSetRenderMode(AE_GFX_RM_COLOR); /**< Set render mode to color. */
 	AEGfxTextureSet(NULL, 0, 0); /**< No texture is set for rendering. */
@@ -823,7 +796,7 @@ void GameStateAsteroidsDraw(void)
 		onValueChange = false;
 
 		// Display Game Over message when lives are exhausted
-		if (sShipLives < 0)
+		if (shipLives < 0)
 		{
 			printf("       GAME OVER       \n");
 		}
@@ -832,14 +805,13 @@ void GameStateAsteroidsDraw(void)
 	// Display winner if the game is over
 	if (gameOver)
 	{
-		// Render "GAME OVER" message in red at the center of the screen
+		// Render "GAME OVER" message
 		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
 		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
 		AEGfxTextureSet(NULL, 0, 0);
 		AEGfxSetTransparency(1.0f);
 
-		// Red color for the text: RGB(1.0, 0.0, 0.0)
-		AEGfxPrint(fontId, "GAME OVER", -0.2f, 0.0f, 2.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+		AEGfxPrint(fontId, "GAME OVER", -0.5f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
 
 	// Render player names on the screen
@@ -849,7 +821,7 @@ void GameStateAsteroidsDraw(void)
 	for (auto p : players)
 	{
 		int id = p.first;
-		DisplayScores(players, id);
+		displayScores();
 	}
 }
 
@@ -1093,12 +1065,12 @@ void synchronizeShips(std::unordered_map<int, PlayerData>& pData) {
 	int myID = Client::getPlayerID();
 
 	// Clean up ships for players who left
-	for (auto it = pShips.begin(); it != pShips.end(); )
+	for (auto it = shipMap.begin(); it != shipMap.end(); )
 	{
 		if (pData.find(it->first) == pData.end() || it->first == myID)
 		{
 			gameObjInstDestroy(it->second);
-			it = pShips.erase(it);
+			it = shipMap.erase(it);
 		}
 		else
 		{
@@ -1115,18 +1087,18 @@ void synchronizeShips(std::unordered_map<int, PlayerData>& pData) {
 		if (id == myID)
 			continue; // Skip yourself
 
-		GameObjInst*& ship = pShips[id];
-		if (!ship)
+		GameObjInst*& shipPointer = shipMap[id];
+		if (!shipPointer)
 		{
 			AEVec2 scale = { SHIP_SCALE_X, SHIP_SCALE_Y };
 			AEVec2 pos = { pdata.X, pdata.Y };
-			ship = gameObjInstCreate(TYPE_SHIP, &scale, &pos, nullptr, 0.0f);
+			shipPointer = gameObjInstCreate(TYPE_SHIP, &scale, &pos, nullptr, 0.0f);
 		}
 
-		if (ship)
+		if (shipPointer)
 		{
-			ship->posCurr = { pdata.X, pdata.Y };
-			ship->dirCurr = pdata.rotation;
+			shipPointer->posCurr = { pdata.X, pdata.Y };
+			shipPointer->dirCurr = pdata.rotation;
 		}
 	}
 }
@@ -1288,7 +1260,7 @@ void renderNetworkBullets() {
  * @param gamePlayers A map containing player data, keyed by player ID.
  * @param playerID The local player's ID.
  */
-void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int playerID) {
+void displayScores() {
 	for (const auto& pair : players) {
 		const int id = pair.first;
 		const PlayerData& player = pair.second;
