@@ -22,7 +22,6 @@ Technology is prohibited.
 */
 /* End Header **************************************************************************/
 
-
 #ifndef CSD1130_COLLISION_H_
 #define CSD1130_COLLISION_H_
 

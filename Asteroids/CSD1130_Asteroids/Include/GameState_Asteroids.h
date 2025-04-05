@@ -23,44 +23,37 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include <unordered_map>
 #include <Client.h>
 
-// ---------------------------------------------------------------------------
+// Game state management
+void GameStateAsteroidsLoad();
+void GameStateAsteroidsInit();
+void GameStateAsteroidsUpdate();
+void GameStateAsteroidsDraw();
+void GameStateAsteroidsFree();
+void GameStateAsteroidsUnload();
 
-void GameStateAsteroidsLoad(void);
-void GameStateAsteroidsInit(void);
-void GameStateAsteroidsUpdate(void);
-void GameStateAsteroidsDraw(void);
-void GameStateAsteroidsFree(void);
-void GameStateAsteroidsUnload(void);
-
-// Player
+// Player state
 static AEVec2 finalPlayerPosition;
 static float playerRotate;
 static int Playerscore;
-
 AEVec2 returnPlayerPosition();
 float returnPlayerRotation();
 int returnPlayerScore();
-//
 
-// Bullet
+// Bullet state
 static AEVec2 finalBulletPosition;
 static float bulletRotate;
-
 AEVec2 returnBulletPosition();
 float returnBulletRotation();
 void renderNetworkBullets();
-//
 
-// Asteroid
+// Asteroid state
 void renderServerAsteroids();
 void updateAsteroidInterpolation();
 void checkBulletAsteroidCollisions();
-//
 
+// Multiplayer sync
 void syncPlayers(std::unordered_map<int, PlayerData>& pData);
 void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData);
 void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID);
 
-// ---------------------------------------------------------------------------
-
-#endif // CSD1130_GAME_STATE_PLAY_H_
+#endif
