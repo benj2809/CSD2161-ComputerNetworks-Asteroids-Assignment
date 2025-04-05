@@ -782,7 +782,7 @@ void GameStateAsteroidsUpdate(void)
 	// Check collisions between bullets and asteroids
 	checkBulletAsteroidCollisions();
 
-	syncPlayers(players);
+	synchronizeShips(players);
 
 	// Make sure our local player's ship is properly tracked
 	for (const auto& pair : players) {
@@ -832,7 +832,7 @@ void GameStateAsteroidsDraw(void)
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 	}
 
-	renderServerAsteroids();
+	renderAsteroids();
 	renderNetworkBullets();
 
 	// Displaying ship lives and score values to user should there be an update to either values.
@@ -866,7 +866,7 @@ void GameStateAsteroidsDraw(void)
 
 	// Don't display timer anymore - removed timer display
 
-	RenderPlayerNames(players);
+	renderNames(players);
 
 	for (auto p : players)
 	{
@@ -999,150 +999,106 @@ void checkBulletAsteroidCollisions() {
 	std::lock_guard<std::mutex> lockAsteroids(asteroidsMutex);
 	Client::lockBullets();
 
-	// For each asteroid, check collision with each bullet
-	for (auto& asteroidPair : asteroids) {
-		if (!asteroidPair.second.isActive) continue;
+	std::vector<std::string> destroyedAsteroids;
+	std::vector<std::string> destroyedBulletIDs;
+	std::vector<GameObjInst*> destroyedLocalBullets;
 
-		// Create asteroid AABB
+	int playerID = Client::getPlayerID();
+
+	for (auto& asteroidPair : asteroids)
+	{
+		if (!asteroidPair.second.isActive)
+			continue;
+
+		// Build asteroid AABB
 		AABB asteroidAABB;
-		float halfSizeX = asteroidPair.second.scaleX / 2.0f;
-		float halfSizeY = asteroidPair.second.scaleY / 2.0f;
+		float halfSizeX = asteroidPair.second.scaleX * 0.5f;
+		float halfSizeY = asteroidPair.second.scaleY * 0.5f;
 		asteroidAABB.min.x = asteroidPair.second.currentX - halfSizeX;
 		asteroidAABB.min.y = asteroidPair.second.currentY - halfSizeY;
 		asteroidAABB.max.x = asteroidPair.second.currentX + halfSizeX;
 		asteroidAABB.max.y = asteroidPair.second.currentY + halfSizeY;
 
-		// Create asteroid velocity vector
-		AEVec2 asteroidVel;
-		asteroidVel.x = asteroidPair.second.velocityX * 120.0f; // Match server velocity scale
-		asteroidVel.y = asteroidPair.second.velocityY * 120.0f;
+		AEVec2 asteroidVel = { asteroidPair.second.velocityX * 120.0f, asteroidPair.second.velocityY * 120.0f };
 
-		// Check against all bullets
-		for (auto bulletIt = bullets.begin(); bulletIt != bullets.end();) {
-			const auto& bulletPair = *bulletIt;
+		bool asteroidDestroyed = false;
 
-			// Skip inactive bullets
-			if (!bulletPair.second.fromLocalPlayer) {
-				++bulletIt;
+		// Check network bullets
+		for (auto& bulletPair : bullets)
+		{
+			if (!bulletPair.second.fromLocalPlayer)
 				continue;
-			}
 
-			// Create bullet AABB
 			AABB bulletAABB;
-			float bulletHalfSizeX = BULLET_SCALE_X / 2.0f;
-			float bulletHalfSizeY = BULLET_SCALE_Y / 2.0f;
-			bulletAABB.min.x = bulletPair.second.X - bulletHalfSizeX;
-			bulletAABB.min.y = bulletPair.second.Y - bulletHalfSizeY;
-			bulletAABB.max.x = bulletPair.second.X + bulletHalfSizeX;
-			bulletAABB.max.y = bulletPair.second.Y + bulletHalfSizeY;
+			float halfBulletX = BULLET_SCALE_X * 0.5f;
+			float halfBulletY = BULLET_SCALE_Y * 0.5f;
+			bulletAABB.min.x = bulletPair.second.X - halfBulletX;
+			bulletAABB.min.y = bulletPair.second.Y - halfBulletY;
+			bulletAABB.max.x = bulletPair.second.X + halfBulletX;
+			bulletAABB.max.y = bulletPair.second.Y + halfBulletY;
 
-			// Create bullet velocity vector
-			AEVec2 bulletVel;
-			bulletVel.x = bulletPair.second.velocityX;
-			bulletVel.y = bulletPair.second.velocityY;
+			AEVec2 bulletVel = { bulletPair.second.velocityX, bulletPair.second.velocityY };
 
-			// Check for collision
 			float tFirst = 0.0f;
-			if (CollisionIntersection_RectRect(
-				bulletAABB, bulletVel,
-				asteroidAABB, asteroidVel,
-				tFirst)) {
-
-				// Collision detected!
-				//std::cout << "Collision detected between bullet " << bulletPair.first
-				//	<< " and asteroid " << asteroidPair.first << std::endl;
-
-				// Report asteroid destruction to server
-				globalClient.sendAsteroidDestructionEvent(asteroidPair.first);
-
-				// Update the player's score
-				int playerID = Client::getPlayerID();
-				if (players.find(playerID) != players.end()) {
-					players[playerID].score += 100; // Increment the player's score by 100
-
-					globalClient.sendScoreUpdateEvent(players[playerID].clientIP, players[playerID].score);
-				}
-
-				// Remove the bullet from the local list
-				bulletIt = bullets.erase(bulletIt);
-
-				// Mark the asteroid as inactive locally (server will confirm)
-				asteroidPair.second.isActive = false;
-
-				// Break out of bullet loop as this asteroid is now destroyed
-				goto nextAsteroid;  // Using goto to break out of nested loop
-			}
-			else {
-				++bulletIt;
+			if (CollisionIntersection_RectRect(bulletAABB, bulletVel, asteroidAABB, asteroidVel, tFirst))
+			{
+				destroyedAsteroids.push_back(asteroidPair.first);
+				destroyedBulletIDs.push_back(bulletPair.first);
+				asteroidDestroyed = true;
+				break; // Done with this asteroid
 			}
 		}
 
-		// Also check against local game object bullets
-		for (auto it = pBullets.begin(); it != pBullets.end();) {
-			GameObjInst* bullet = *it;
+		// Check local bullets only if asteroid is not destroyed yet
+		if (!asteroidDestroyed)
+		{
+			for (auto* bullet : pBullets)
+			{
+				if (!bullet || !(bullet->flag & FLAG_ACTIVE))
+					continue;
 
-			if (!bullet || !(bullet->flag & FLAG_ACTIVE)) {
-				it = pBullets.erase(it);
-				continue;
-			}
+				AABB bulletAABB;
+				bulletAABB.min.x = bullet->posCurr.x - bullet->scale.x * 0.5f;
+				bulletAABB.min.y = bullet->posCurr.y - bullet->scale.y * 0.5f;
+				bulletAABB.max.x = bullet->posCurr.x + bullet->scale.x * 0.5f;
+				bulletAABB.max.y = bullet->posCurr.y + bullet->scale.y * 0.5f;
 
-			// Create bullet AABB
-			AABB bulletAABB;
-			bulletAABB.min.x = bullet->posCurr.x - bullet->scale.x / 2.0f;
-			bulletAABB.min.y = bullet->posCurr.y - bullet->scale.y / 2.0f;
-			bulletAABB.max.x = bullet->posCurr.x + bullet->scale.x / 2.0f;
-			bulletAABB.max.y = bullet->posCurr.y + bullet->scale.y / 2.0f;
-
-			// Check for collision
-			float tFirst = 0.0f;
-			if (CollisionIntersection_RectRect(
-				bulletAABB, bullet->velCurr,
-				asteroidAABB, asteroidVel,
-				tFirst)) {
-
-				// Collision detected!
-				//std::cout << "Collision detected between local bullet and asteroid "
-				//	<< asteroidPair.first << std::endl;
-
-				// Report asteroid destruction to server
-				globalClient.sendAsteroidDestructionEvent(asteroidPair.first);
-				// Update the player's score
-				int playerID = Client::getPlayerID();
-				//Get the port number of the client 
-				SOCKET clientSocket = globalClient.getSocket();
-				sockaddr_in addr;
-				int addrLen = sizeof(addr);
-				uint16_t port_out = 0;
-				if (getsockname(clientSocket, (sockaddr*)&addr, &addrLen) == 0) {
-					// Convert the port number from network byte order to host byte order
-					uint16_t port = ntohs(addr.sin_port);
-					port_out = port;
-					//std::cout << "Port number: " << port << std::endl;
+				float tFirst = 0.0f;
+				if (CollisionIntersection_RectRect(bulletAABB, bullet->velCurr, asteroidAABB, asteroidVel, tFirst))
+				{
+					destroyedAsteroids.push_back(asteroidPair.first);
+					destroyedLocalBullets.push_back(bullet);
+					asteroidDestroyed = true;
+					break;
 				}
-				else {
-					std::cerr << "Failed to get socket name" << std::endl;
-				}
-				if (players.find(playerID) != players.end()) {
-					Playerscore += 100; // Increment the player's score by 100
-					globalClient.sendScoreUpdateEvent(players[playerID].clientIP +":"+ std::to_string(port_out), Playerscore);
-				}
-				// Destroy the bullet game object
-				gameObjInstDestroy(bullet);
-				it = pBullets.erase(it);
-
-				// Mark the asteroid as inactive locally (server will confirm)
-				asteroidPair.second.isActive = false;
-
-				// Break out of bullet loop as this asteroid is now destroyed
-				goto nextAsteroid;
-			}
-			else {
-				++it;
 			}
 		}
+	}
 
-	nextAsteroid:
-		continue;
+	// Apply destructions after loop
+	for (const auto& asteroidID : destroyedAsteroids)
+	{
+		globalClient.sendAsteroidDestructionEvent(asteroidID);
+		asteroids[asteroidID].isActive = false;
+
+		// Give score
+		if (players.find(playerID) != players.end())
+		{
+			players[playerID].score += 100;
+			globalClient.sendScoreUpdateEvent(players[playerID].clientIP, players[playerID].score);
+		}
+	}
+
+	// Remove bullets
+	for (const auto& bulletID : destroyedBulletIDs)
+	{
+		bullets.erase(bulletID);
+	}
+
+	for (auto* bullet : destroyedLocalBullets)
+	{
+		gameObjInstDestroy(bullet);
+		pBullets.erase(std::remove(pBullets.begin(), pBullets.end(), bullet), pBullets.end());
 	}
 
 	Client::unlockBullets();
@@ -1155,49 +1111,44 @@ void checkBulletAsteroidCollisions() {
  *
  * @param pData A map containing player data, keyed by player ID.
  */
-void syncPlayers(std::unordered_map<int, PlayerData>& pData) {
-	// Clean up any player ships that aren't in the current player data
-	for (auto it = pShips.begin(); it != pShips.end();) {
-		if (pData.find(it->first) == pData.end()) {
-			// Player no longer exists in the data, destroy their ship and remove from the map
-			if (it->second) {
-				gameObjInstDestroy(it->second);
-			}
+void synchronizeShips(std::unordered_map<int, PlayerData>& pData) {
+	int myID = Client::getPlayerID();
+
+	// Clean up ships for players who left
+	for (auto it = pShips.begin(); it != pShips.end(); )
+	{
+		if (pData.find(it->first) == pData.end() || it->first == myID)
+		{
+			gameObjInstDestroy(it->second);
 			it = pShips.erase(it);
 		}
-		else {
+		else
+		{
 			++it;
 		}
 	}
 
-	for (const auto& pair : pData) {
-		// Skip our own player ID - we'll handle our own ship separately
-		if (pair.second.playerID == Client::getPlayerID()) {
-			// If we somehow have our own player ID in pShips, remove it
-			auto it = pShips.find(pair.first);
-			if (it != pShips.end()) {
-				if (it->second) {
-					gameObjInstDestroy(it->second);
-				}
-				pShips.erase(it);
-			}
-			continue;
+	// Create or update ships for other players
+	for (const auto& pair : pData)
+	{
+		int id = pair.first;
+		const PlayerData& pdata = pair.second;
+
+		if (id == myID)
+			continue; // Skip yourself
+
+		GameObjInst*& ship = pShips[id];
+		if (!ship)
+		{
+			AEVec2 scale = { SHIP_SCALE_X, SHIP_SCALE_Y };
+			AEVec2 pos = { pdata.X, pdata.Y };
+			ship = gameObjInstCreate(TYPE_SHIP, &scale, &pos, nullptr, 0.0f);
 		}
 
-		// If player does not have a ship, create one
-		if (pShips.find(pair.first) == pShips.end()) {
-			AEVec2 scale;
-			AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
-			AEVec2 position;
-			AEVec2Set(&position, pData[pair.first].X, pData[pair.first].Y);
-			pShips[pair.first] = gameObjInstCreate(TYPE_SHIP, &scale, &position, nullptr, 0.0f);
-		}
-		else {
-			// Update existing ship position
-			AEVec2 position;
-			AEVec2Set(&position, pData[pair.first].X, pData[pair.first].Y);
-			pShips[pair.first]->posCurr = position;
-			pShips[pair.first]->dirCurr = pair.second.rotation;
+		if (ship)
+		{
+			ship->posCurr = { pdata.X, pdata.Y };
+			ship->dirCurr = pdata.rotation;
 		}
 	}
 }
@@ -1209,39 +1160,40 @@ void syncPlayers(std::unordered_map<int, PlayerData>& pData) {
  *
  * @param pData A map containing player data, keyed by player ID.
  */
-void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData) {
+void renderNames(std::unordered_map<int, PlayerData>& pData) {
+	// Iterate through each player in the unordered map (pData)
 	for (const auto& pair : pData) {
-		const PlayerData& player = pair.second; // Get player data
+		const PlayerData& player = pair.second; // Retrieve player data from the map entry
 
 		AEVec2 position;
 		f32 normalizedX, normalizedY;
+
+		// Set the player's position based on the player data (X, Y coordinates)
 		AEVec2Set(&position, player.X, player.Y);
 
-		// Wrap the position to the window bounds
+		// Wrap the player's position within the window bounds to handle screen boundaries
 		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
 		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
 
-		// Normalize the wrapped position from window bounds to [-1, 1]
+		// Normalize the wrapped position to fit within the normalized screen space [-1, 1]
 		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
 		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
 
+		// Apply slight offsets for visual positioning adjustments
 		normalizedX -= 0.2f;
 		normalizedY += 0.1f;
 
-		// Convert player ID to a string
+		// Convert the player ID to a string format (e.g., "Player 1")
 		char nameBuffer[100];
 		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
 
-		// Debug: Output the player position (normalized)
-		//printf("Rendering Player %d at normalized position: (%.2f, %.2f)\n", pair.first, normalizedX, normalizedY);
+		// Set rendering properties for drawing the player name
+		AEGfxSetRenderMode(AE_GFX_RM_COLOR);  // Set render mode to color
+		AEGfxSetBlendMode(AE_GFX_BM_BLEND);   // Enable blending for transparency
+		AEGfxTextureSet(NULL, 0, 0);          // Set texture to NULL (no texture)
+		AEGfxSetTransparency(1.0f);           // Set full opacity
 
-		// Set rendering settings
-		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
-		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
-		AEGfxTextureSet(NULL, 0, 0);
-		AEGfxSetTransparency(1.0f);
-
-		// Draw the name at the normalized position
+		// Render the player's name at the calculated normalized position on screen
 		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }
@@ -1251,45 +1203,48 @@ void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData) {
  *
  * This function updates asteroid interpolation and renders them with correct transformations.
  */
-void renderServerAsteroids() {
+void renderAsteroids() {
+	// First update all asteroid interpolation
 	updateAsteroidInterpolation();
 
 	std::lock_guard<std::mutex> lock(asteroidsMutex);
 
+	// Iterate through all asteroids
 	for (const auto& pair : asteroids) {
 		const std::string& id = pair.first;
-		const auto& asteroid = pair.second;
+		const AsteroidData& asteroid = pair.second;
 
-		if (!asteroid.isActive) continue;
+		if (!asteroid.isActive) {
+			continue;
+		}
 
-		AEVec2 scale;
-		AEVec2 pos;
-		AEVec2 vel;
+		AEVec2 scale = { asteroid.scaleX, asteroid.scaleY };
+		AEVec2 pos = { asteroid.currentX, asteroid.currentY };
+		AEVec2 vel = { asteroid.velocityX, asteroid.velocityY };
 
-		AEVec2Set(&scale, asteroid.scaleX, asteroid.scaleY);
-		AEVec2Set(&pos, asteroid.currentX, asteroid.currentY);
-		AEVec2Set(&vel, asteroid.velocityX, asteroid.velocityY);
-
+		// Create the asteroid object instance
 		GameObjInst* pInst = gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
 
-		if (!pInst) continue;
+		if (pInst) {
+			pInst->posCurr = pos;
+			pInst->velCurr = vel;
 
-		pInst->posCurr.x = pos.x;
-		pInst->posCurr.y = pos.y;
-		pInst->velCurr.x = vel.x;
-		pInst->velCurr.y = vel.y;
+			AEMtx33 scaleMtx;
+			AEMtx33 rotMtx;
+			AEMtx33 transMtx;
 
-		AEMtx33 trans, rot, scaleMtx;
-		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
-		AEMtx33Rot(&rot, pInst->dirCurr);
-		AEMtx33Trans(&trans, pInst->posCurr.x, pInst->posCurr.y);
-		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
-		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
+			AEMtx33Scale(&scaleMtx, scale.x, scale.y);
+			AEMtx33Rot(&rotMtx, pInst->dirCurr);
+			AEMtx33Trans(&transMtx, pos.x, pos.y);
 
-		AEGfxSetTransform(pInst->transform.m);
-		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+			AEMtx33Concat(&pInst->transform, &rotMtx, &scaleMtx);
+			AEMtx33Concat(&pInst->transform, &transMtx, &pInst->transform);
 
-		gameObjInstDestroy(pInst);
+			AEGfxSetTransform(pInst->transform.m);
+			AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+
+			gameObjInstDestroy(pInst);
+		}
 	}
 }
 
@@ -1301,43 +1256,50 @@ void renderServerAsteroids() {
 void renderNetworkBullets() {
 	Client::lockBullets();
 
-	for (const auto& pair : bullets) {
+	std::vector<GameObjInst*> tempBullets; // Temporary list to manage instances
+
+	// Pre-create all temporary bullets
+	for (const auto& pair : bullets)
+	{
 		const BulletData& bullet = pair.second;
 
-		if (bullet.fromLocalPlayer) {
-			continue;
-		}
+		if (bullet.fromLocalPlayer)
+			continue; // Skip local bullets
 
-		AEVec2 scale;
-		AEVec2 pos;
-		AEVec2 vel;
-
-		AEVec2Set(&scale, BULLET_SCALE_X, BULLET_SCALE_Y);
-		AEVec2Set(&pos, bullet.X, bullet.Y);
-		AEVec2Set(&vel, bullet.velocityX, bullet.velocityY);
+		AEVec2 scale = { BULLET_SCALE_X, BULLET_SCALE_Y };
+		AEVec2 pos = { bullet.X, bullet.Y };
+		AEVec2 vel = { bullet.velocityX, bullet.velocityY };
 
 		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.direction);
+		if (pInst)
+		{
+			pInst->posCurr = pos;
+			pInst->dirCurr = bullet.direction;
+			tempBullets.push_back(pInst);
+		}
+	}
 
-		if (!pInst) continue;
+	Client::unlockBullets(); // Unlock early after bullet copies are made
 
-		pInst->posCurr.x = pos.x;
-		pInst->posCurr.y = pos.y;
-		pInst->dirCurr = bullet.direction;
-
-		AEMtx33 trans, rot, scaleMtx;
+	// Now render all temp bullets
+	for (GameObjInst* pInst : tempBullets)
+	{
+		// Calculate transform
+		AEMtx33 scaleMtx, rotMtx, transMtx;
 		AEMtx33Scale(&scaleMtx, pInst->scale.x, pInst->scale.y);
-		AEMtx33Rot(&rot, pInst->dirCurr);
-		AEMtx33Trans(&trans, pInst->posCurr.x, pInst->posCurr.y);
-		AEMtx33Concat(&pInst->transform, &rot, &scaleMtx);
-		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
+		AEMtx33Rot(&rotMtx, pInst->dirCurr);
+		AEMtx33Trans(&transMtx, pInst->posCurr.x, pInst->posCurr.y);
 
+		AEMtx33Concat(&pInst->transform, &rotMtx, &scaleMtx);
+		AEMtx33Concat(&pInst->transform, &transMtx, &pInst->transform);
+
+		// Draw
 		AEGfxSetTransform(pInst->transform.m);
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 
+		// Destroy temp instance
 		gameObjInstDestroy(pInst);
 	}
-
-	Client::unlockBullets();
 }
 
 /**
@@ -1349,34 +1311,26 @@ void renderNetworkBullets() {
  * @param playerID The local player's ID.
  */
 void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int playerID) {
-	for (const auto& pair : gamePlayers) {
+	for (const auto& pair : players) {
+		const int id = pair.first;
 		const PlayerData& player = pair.second;
 
-		AEVec2 position;
-		f32 normalizedX, normalizedY;
-		AEVec2Set(&position, player.X, player.Y);
+		AEVec2 wrappedPos = {
+			AEWrap(player.X, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X),
+			AEWrap(player.Y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y)
+		};
 
-		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
-		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+		float normalizedX = ((wrappedPos.x - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX())) * 2.0f - 1.0f - 0.2f;
+		float normalizedY = ((wrappedPos.y - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY())) * 2.0f - 1.0f + 0.1f;
 
-		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
-		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
-
-		normalizedX -= 0.2f;
-		normalizedY += 0.1f;
-
-		char scoreText[256];
-		int id = pair.first;
-		int score = pair.second.score;
-		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, score);
+		char scoreText[64];
+		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, player.score);
 
 		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
 		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
 		AEGfxTextureSet(NULL, 0, 0);
 		AEGfxSetTransparency(1.0f);
 
-		u32 color = (id == playerID) ? 0x00FF00 : 0xFFFFFF;
-
-		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 	}
 }

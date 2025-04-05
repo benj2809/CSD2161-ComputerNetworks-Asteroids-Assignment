@@ -47,13 +47,13 @@ float fetchBulletRotation();
 void renderNetworkBullets();
 
 // Asteroid state
-void renderServerAsteroids();
+void renderAsteroids();
 void updateAsteroidInterpolation();
 void checkBulletAsteroidCollisions();
 
 // Multiplayer sync
-void syncPlayers(std::unordered_map<int, PlayerData>& pData);
-void RenderPlayerNames(std::unordered_map<int, PlayerData>& pData);
+void synchronizeShips(std::unordered_map<int, PlayerData>& pData);
+void renderNames(std::unordered_map<int, PlayerData>& pData);
 void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID);
 
 #endif
