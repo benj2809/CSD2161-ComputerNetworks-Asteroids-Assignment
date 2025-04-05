@@ -226,110 +226,89 @@ void Helper_Wall_Collision()
 
 /******************************************************************************/
 /*!
-	"Load" function of this state
+	@brief Load function for the Asteroids game state.
+
+	This function is responsible for loading the game state, initializing game
+	objects such as the ship, bullets, asteroids, and walls. It also creates
+	the corresponding meshes for each of these objects.
 */
 /******************************************************************************/
 void GameStateAsteroidsLoad(void)
 {
-	// zero the game object array
-	memset(sGameObjList, 0, sizeof(GameObj) * GAME_OBJ_NUM_MAX);
-	// No game objects (shapes) at this point
-	sGameObjNum = 0;
+	GameObj* pObj; /**< Pointer to the current game object being created. */
 
-	// zero the game object instance array
+	// Zero out the game object array and instance array.
+	memset(sGameObjList, 0, sizeof(GameObj) * GAME_OBJ_NUM_MAX);
+	sGameObjNum = 0;
 	memset(sGameObjInstList, 0, sizeof(GameObjInst) * GAME_OBJ_INST_NUM_MAX);
-	// No game object instances (sprites) at this point
 	sGameObjInstNum = 0;
 
-	// The ship object instance hasn't been created yet, so this "spShip" pointer is initialized to 0
+	// The ship object instance hasn't been created yet.
 	spShip = nullptr;
 	spWall = nullptr;
 
-	// load/create the mesh data (game objects / Shapes)
-	GameObj* pObj;
-
-	// =====================
-	// create the ship shape
-	// =====================
+	// Create the ship shape mesh.
 	pObj = sGameObjList + sGameObjNum++;
 	pObj->type = TYPE_SHIP;
-
 	AEGfxMeshStart();
-	AEGfxTriAdd(
-		-1.0f, 1.0f, 0xFFFF0000, 0.0f, 0.0f,
+	AEGfxTriAdd(-1.0f, 1.0f, 0xFFFF0000, 0.0f, 0.0f,
 		-1.0f, -1.0f, 0xFFFF0000, 0.0f, 0.0f,
 		1.5f, 0.0f, 0xFFFF0000, 0.0f, 0.0f);
-
 	pObj->pMesh = AEGfxMeshEnd();
-	AE_ASSERT_MESG(pObj->pMesh, "fail to create object!!");
+	AE_ASSERT_MESG(pObj->pMesh, "Failed to create ship object mesh!");
 
-
-	// =======================
-	// create the bullet shape
-	// =======================
+	// Create the bullet shape mesh.
 	pObj = sGameObjList + sGameObjNum++;
 	pObj->type = TYPE_BULLET;
-
 	AEGfxMeshStart();
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0xFFFFFF00, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0xFFFFFF00, 0.0f, 0.0f,
 		0.5f, 0.5f, 0xFFFFFF00, 0.0f, 0.0f,
 		-0.5f, 0.5f, 0xFFFFFF00, 0.0f, 0.0f);
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0xFFFFFF00, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0xFFFFFF00, 0.0f, 0.0f,
 		0.5f, -0.5f, 0xFFFFFF00, 0.0f, 0.0f,
 		0.5f, 0.5f, 0xFFFFFF00, 0.0f, 0.0f);
-
 	pObj->pMesh = AEGfxMeshEnd();
-	AE_ASSERT_MESG(pObj->pMesh, "fail to create object!!");
+	AE_ASSERT_MESG(pObj->pMesh, "Failed to create bullet object mesh!");
 
-	// =========================
-	// create the asteroid shape
-	// =========================
+	// Create the asteroid shape mesh.
 	pObj = sGameObjList + sGameObjNum++;
 	pObj->type = TYPE_ASTEROID;
-
 	AEGfxMeshStart();
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0xFF808080, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0xFF808080, 0.0f, 0.0f,
 		0.5f, 0.5f, 0xFF808080, 0.0f, 0.0f,
 		-0.5f, 0.5f, 0xFF808080, 0.0f, 0.0f);
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0xFF808080, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0xFF808080, 0.0f, 0.0f,
 		0.5f, -0.5f, 0xFF808080, 0.0f, 0.0f,
 		0.5f, 0.5f, 0xFF808080, 0.0f, 0.0f);
-
 	pObj->pMesh = AEGfxMeshEnd();
-	AE_ASSERT_MESG(pObj->pMesh, "fail to create object!!");
+	AE_ASSERT_MESG(pObj->pMesh, "Failed to create asteroid object mesh!");
 
-	// =========================
-	// create the wall shape
-	// =========================
+	// Create the wall shape mesh.
 	pObj = sGameObjList + sGameObjNum++;
 	pObj->type = TYPE_WALL;
-
 	AEGfxMeshStart();
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
 		0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f,
 		-0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f);
-	AEGfxTriAdd(
-		-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
+	AEGfxTriAdd(-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
 		0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
 		0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f);
-
 	pObj->pMesh = AEGfxMeshEnd();
-	AE_ASSERT_MESG(pObj->pMesh, "fail to create object!!");
+	AE_ASSERT_MESG(pObj->pMesh, "Failed to create wall object mesh!");
 }
 
 /******************************************************************************/
 /*!
-	"Initialize" function of this state
+	@brief Initialize function for the Asteroids game state.
+
+	This function initializes the game state by clearing previous game objects
+	(such as ships and bullets), creating the main ship object, and setting
+	initial game values such as score and lives.
 */
 /******************************************************************************/
 void GameStateAsteroidsInit(void)
 {
-	// Clear any existing player ships from previous sessions
+	// Clear existing ships and bullets.
 	for (auto it = pShips.begin(); it != pShips.end(); ++it) {
 		if (it->second) {
 			gameObjInstDestroy(it->second);
@@ -337,7 +316,6 @@ void GameStateAsteroidsInit(void)
 	}
 	pShips.clear();
 
-	// Clear any bullets from previous sessions
 	for (auto it = pBullets.begin(); it != pBullets.end(); ++it) {
 		if (*it) {
 			gameObjInstDestroy(*it);
@@ -345,20 +323,26 @@ void GameStateAsteroidsInit(void)
 	}
 	pBullets.clear();
 
-	// create the main ship
+	// Create the main ship instance.
 	AEVec2 scale;
 	AEVec2Set(&scale, SHIP_SCALE_X, SHIP_SCALE_Y);
 	spShip = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
 	AE_ASSERT(spShip);
 
-	// reset the score and the number of ships
+	// Reset score and lives.
 	sScore = 0;
 	sShipLives = SHIP_INITIAL_NUM;
 }
 
-/******************************************************************************/
+/******************************************************************************/ 
 /*!
-	"Update" function of this state
+	\brief "Update" function of this state
+
+	Handles game state updates including score changes, player movement, 
+	collisions, bullet creation, and game over conditions. It updates the 
+	player's score, checks for collisions, moves the player's ship, and 
+	handles shooting mechanics. Additionally, it checks for game over conditions
+	and announces the winner when applicable.
 */
 /******************************************************************************/
 void GameStateAsteroidsUpdate(void)
@@ -659,35 +643,34 @@ void GameStateAsteroidsUpdate(void)
 	{
 		GameObjInst* pInst = sGameObjInstList + i;
 
-		// skip non-active object
+		// Skip non-active game objects (objects that are inactive will be ignored in the logic)
 		if ((pInst->flag & FLAG_ACTIVE) == 0)
 			continue;
 
-		// check if the object is a ship
-		if (pInst->pObject->type == TYPE_SHIP) // Checking for ship.
-		{
-			// Wrap the ship from one end of the screen to the other
-			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - SHIP_SCALE_X,	// Wrapping the x-coordinates of the ship to the opposite end of the screen, should it go out of bounds.
-				AEGfxGetWinMaxX() + SHIP_SCALE_X);
-			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - SHIP_SCALE_Y,   // Likewise, wrapping the y-coordinates of the ship to the opposite end of the screen, should it go out of bounds.
-				AEGfxGetWinMaxY() + SHIP_SCALE_Y);
-			//update ship position
+		// Handle ship objects: Wrap the ship around the screen when it goes off the edges
+		if (pInst->pObject->type == TYPE_SHIP) {
+			// Wrap the x-coordinate of the ship to the opposite end of the screen, if it goes out of bounds
+			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
+
+			// Wrap the y-coordinate of the ship to the opposite end of the screen, if it goes out of bounds
+			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
 		}
 
-		// Wrap asteroids here
+		// Handle asteroid objects: Wrap the asteroids around the screen when they go off the edges
+		if (pInst->pObject->type == TYPE_ASTEROID) {
+			// Wrap the x-coordinate of the asteroid to the opposite end of the screen, if it goes out of bounds
+			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - ASTEROID_MAX_SCALE_X, AEGfxGetWinMaxX() + ASTEROID_MAX_SCALE_X);
 
-		if (pInst->pObject->type == TYPE_ASTEROID) { // Checking for asteroid.
-			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - ASTEROID_MAX_SCALE_X,	// Wrapping the x-coordinate of the asteroid to the opposite end of the screen, should it go out of bounds.
-				AEGfxGetWinMaxX() + ASTEROID_MAX_SCALE_X);
-			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - ASTEROID_MAX_SCALE_Y,	// Likewise, wrapping the y-coordinates of the asteroid to the opposite end of the screen, should it go out of bounds.
-				AEGfxGetWinMaxY() + ASTEROID_MAX_SCALE_Y);
+			// Wrap the y-coordinate of the asteroid to the opposite end of the screen, if it goes out of bounds
+			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - ASTEROID_MAX_SCALE_Y, AEGfxGetWinMaxY() + ASTEROID_MAX_SCALE_Y);
 		}
 
-		// Remove bullets that go out of bounds
-		if (pInst->pObject->type == TYPE_BULLET) { // Checking for bullet.
-			if (pInst->posCurr.x > (AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.x < -(AEGfxGetWindowWidth() / 2.f)    // Checking if the bullets position falls out of bounds, in our case the bound anything within the screen width and height.
+		// Handle bullet objects: Remove bullets that go out of bounds to free up resources
+		if (pInst->pObject->type == TYPE_BULLET) {
+			// Check if the bullet has moved out of the screen's horizontal or vertical bounds
+			if (pInst->posCurr.x > (AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.x < -(AEGfxGetWindowWidth() / 2.f)
 				|| pInst->posCurr.y >(AEGfxGetWindowHeight() / 2.f) || pInst->posCurr.y < -(AEGfxGetWindowHeight() / 2.f))
-				gameObjInstDestroy(pInst);																				 // Destroying the bullet should it go out of bounds.
+				gameObjInstDestroy(pInst); // Destroy the bullet if it's out of bounds
 		}
 	}
 
@@ -699,10 +682,6 @@ void GameStateAsteroidsUpdate(void)
 	{
 		GameObjInst* pInst = sGameObjInstList + i; // Iterate through each instance.
 		AEMtx33		 trans{}, rot{}, scale{}; // Vectors for matrices.
-
-		/*UNREFERENCED_PARAMETER(trans);
-		UNREFERENCED_PARAMETER(rot);
-		UNREFERENCED_PARAMETER(scale);*/
 
 		// skip non-active object
 		if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip if instance is not active.
@@ -800,74 +779,73 @@ void GameStateAsteroidsUpdate(void)
 
 /******************************************************************************/
 /*!
-	Draw function for all the instances.
-	Namely the ship, bullets, asteroids and the static wall.
+	@brief Draw function for all the instances in the game.
+
+	This function is responsible for rendering the game objects such as the ship, bullets,
+	asteroids, and the static wall. It also handles the display of the ship's lives and score
+	and displays game-over messages when appropriate.
 */
 /******************************************************************************/
 void GameStateAsteroidsDraw(void)
 {
-	char strBuffer[1024]; // To store the score and ship lives to print the user whenever there is an update to either values.
+	char strBuffer[1024]; /**< Buffer for score and ship lives display. */
 
-	AEGfxSetRenderMode(AE_GFX_RM_COLOR); // Render mode.
-	AEGfxTextureSet(NULL, 0, 0); // No texture.
+	// Set up rendering settings
+	AEGfxSetRenderMode(AE_GFX_RM_COLOR); /**< Set render mode to color. */
+	AEGfxTextureSet(NULL, 0, 0); /**< No texture is set for rendering. */
+	AEGfxSetBlendMode(AE_GFX_BM_BLEND); /**< Enable blending for transparency. */
+	AEGfxSetTransparency(1.0f); /**< Full opacity (no transparency). */
 
-	// Set blend mode to AE_GFX_BM_BLEND.
-	// This will allow transparency.
-	AEGfxSetBlendMode(AE_GFX_BM_BLEND);
-	AEGfxSetTransparency(1.0f);
-
-	// draw all object instances in the list
+	// Iterate through all game object instances and render active ones
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
-		GameObjInst* pInst = sGameObjInstList + i; // Accessing each instance...
+		GameObjInst* pInst = sGameObjInstList + i; /**< Access the current game object instance. */
 
-		// skip non-active object
-		if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip...
+		// Skip inactive objects
+		if ((pInst->flag & FLAG_ACTIVE) == 0) {
 			continue;
+		}
 
-		// Set the current object instance's transform matrix using "AEGfxSetTransform".
+		// Set the transform matrix for the current object
 		AEGfxSetTransform(pInst->transform.m);
 
-		// Draw the shape used by the current object instance using "AEGfxMeshDraw".
+		// Draw the object using its mesh
 		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
 	}
 
+	// Render the asteroids and network bullets
 	renderAsteroids();
 	renderNetworkBullets();
 
-	// Displaying ship lives and score values to user should there be an update to either values.
+	// Display ship lives and score values to the user if there are updates
 	if (onValueChange)
 	{
-		//sprintf_s(strBuffer, "Ship Left: %d", sShipLives >= 0 ? sShipLives : 0);
-		//printf("%s \n", strBuffer);
 		onValueChange = false;
-		// display the game over message
+
+		// Display Game Over message when lives are exhausted
 		if (sShipLives < 0)
 		{
 			printf("       GAME OVER       \n");
 		}
-		if (sScore == 5000) {
-			printf("       YOU ROCK!       \n");
-		}
 	}
 
-	// Display GAME OVER on screen when the game is over
+	// Display winner if the game is over
 	if (gameOver)
 	{
-		// Draw a large red "GAME OVER" text in the center of the screen
+		// Render "GAME OVER" message in red at the center of the screen
 		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
 		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
 		AEGfxTextureSet(NULL, 0, 0);
 		AEGfxSetTransparency(1.0f);
 
-		// Red color: RGB(1.0, 0.0, 0.0)
+		// Red color for the text: RGB(1.0, 0.0, 0.0)
 		AEGfxPrint(fontId, "GAME OVER", -0.2f, 0.0f, 2.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	// Don't display timer anymore - removed timer display
-
+	// Render player names on the screen
 	renderNames(players);
 
+	// Display scores for each player
 	for (auto p : players)
 	{
 		int id = p.first;
