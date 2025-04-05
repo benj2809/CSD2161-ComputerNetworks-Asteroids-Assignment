@@ -20,7 +20,6 @@ Technology is prohibited.
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define NOMINMAX
 
 // System includes (grouped and ordered logically)
@@ -44,7 +43,12 @@ Technology is prohibited.
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <functional>
 #include <vector>
+
+constexpr char ASTEROID_PREFIX[] = "ASTEROIDS";
+constexpr char BULLET_PREFIX[] = "BULLETS";
+constexpr char SCORE_UPDATE_PREFIX[] = "SCORE_UPDATE";
 
 /* ======================= DATA STRUCTURES ======================= */
 
@@ -117,7 +121,7 @@ public:
     /* ========== PUBLIC INTERFACE ========== */
 
     // Initialization
-    bool initialize(const std::string& serverIP, uint16_t serverPort);
+    bool initialize(const std::string& serverIPAddress, uint16_t serverPortNumber);
 
     // Runtime control
     void run();
@@ -128,10 +132,9 @@ public:
 
     // Network operations
     void sendToServerUdp();
-    void reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir,
-        const std::string& bulletID = "");
-    void reportAsteroidDestruction(const std::string& asteroidID);
-    void reportPlayerScore(const std::string& playerID, int score);
+    void sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID = "");
+    void sendAsteroidDestructionEvent(const std::string& asteroidID);
+    void sendScoreUpdateEvent(const std::string& pid, int score);
 
     // Thread synchronization
     static void lockBullets() { bulletsMutex.lock(); }
@@ -139,38 +142,54 @@ public:
 
     // Accessors
     static void displayPlayerScores();
-    static int getPlayerCount() { return playerCount; }
+    static int getPlayerCount() { return static_cast<int>(playerCount); }
     static int getPlayerID() { return playerID; }
     SOCKET getSocket() const { return clientSocket; }
+
+    void cleanup() noexcept;
 
 private:
     /* ========== PRIVATE IMPLEMENTATION ========== */
 
     // Network setup
+    struct WinsockManager {
+        WinsockManager() {
+            if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
+                throw std::runtime_error("WSAStartup failed");
+            }
+        }
+        ~WinsockManager() {
+            WSACleanup();
+        }
+        WSADATA wsaData;
+    };
+    std::unique_ptr<WinsockManager> winsock;
     bool setupWinsock();
-    bool resolveAddress(const std::string& serverIP, uint16_t serverPort);
+    bool winsockInitialized = false;
+    bool resolveAddress(const std::string& serverIPAddress, uint16_t serverPortNumber);
     bool createSocket();
     bool connectToServer();
 
     // Network handling
-    void handleNetwork();
-    void cleanup();
+    void receiveNetworkMessages();
 
     // Data processing helpers
-    void processAsteroidData(const std::string& data);
-    void processBulletData(const std::string& data);
-    void processScoreUpdate(const std::string& data);
-    void processPlayerData(const std::string& data);
-    void sendServerMessage(const std::string& message);
+    void updateAsteroidsFromNetwork(const std::string& data);
+    void updateBulletsFromNetwork(const std::string& data);
+    void updateScoresFromNetwork(const std::string& data);
+    void updatePlayersFromNetwork(const std::string& data);
+    void sendRawMessage(const std::string& message);
 
     /* ========== MEMBER VARIABLES ========== */
     SOCKET clientSocket = INVALID_SOCKET;  ///< Network socket handle
     std::string serverIP;                  ///< Server IP address
     uint16_t serverPort;                   ///< Server port number
 
+    sockaddr_in serverSockAddr;            ///< Server address for UDP communication
+
     // Static members
-    static std::mutex playersMutex;               ///< General-purpose mutex
+    static std::mutex playersMutex;        ///< General-purpose mutex
     static std::mutex bulletsMutex;        ///< Bullet data mutex
-    static size_t playerCount;                  ///< Player count
+    static size_t playerCount;             ///< Player count
     static int playerID;                   ///< This client's player ID
 };

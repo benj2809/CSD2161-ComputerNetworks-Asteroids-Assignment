@@ -141,7 +141,6 @@ private:
     bool resolveServerAddress(const std::string& port);
     bool createServerSocket();
     bool bindServerSocket();
-    bool startServerListening();
 
     // Game object management
     void spawnAsteroid();
@@ -156,7 +155,6 @@ private:
     // Network message handling
     void processClientMessage(UdpClientMessage message);
     void sendPlayerStateToClients(SOCKET socket);
-    void removeInactivePlayers();
     void updateGameTimer(float deltaTime);
     void broadcastTimeUpdate();
 

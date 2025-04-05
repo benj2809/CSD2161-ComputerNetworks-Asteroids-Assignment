@@ -41,15 +41,16 @@ std::unordered_map<std::string, BulletData> bullets;
  * @param serverPort The port number of the server
  * @return true if initialization succeeds, false otherwise
  */
-bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
-    this->serverIP = serverIP;
-    this->serverPort = serverPort;
+bool Client::initialize(const std::string& serverIPAddress, uint16_t serverPortNumber) {
+    this->serverIP = serverIPAddress;
+    this->serverPort = serverPortNumber;
     playerCount = 0;
 
-    // Initialization sequence
-    return setupWinsock() &&
-        resolveAddress(serverIP, serverPort) &&
-        createSocket();
+    // Initialization sequence - setupWinsock must be first
+    if (!setupWinsock()) {
+        return false;
+    }
+    return resolveAddress(serverIPAddress, serverPortNumber) && createSocket();
 }
 
 /**
@@ -57,12 +58,14 @@ bool Client::initialize(const std::string& serverIP, uint16_t serverPort) {
  * @return true if Winsock initializes successfully
  */
 bool Client::setupWinsock() {
-    WSADATA wsaData{};
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
-        std::cerr << "WSAStartup failed." << std::endl;
+    try {
+        winsock = std::make_unique<WinsockManager>();
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
         return false;
     }
-    return true;
 }
 
 /**
@@ -71,21 +74,8 @@ bool Client::setupWinsock() {
  * @param serverPort The server port number
  * @return true if address resolution succeeds
  */
-bool Client::resolveAddress(const std::string& serverIP, uint16_t serverPort) {
-    addrinfo hints{};
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;
-
-    addrinfo* addressInfo = nullptr;
-    if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &addressInfo) != 0) {
-        std::cerr << "getaddrinfo failed." << std::endl;
-        WSACleanup();
-        return false;
-    }
-
-    freeaddrinfo(addressInfo);
-    return true;
+bool Client::resolveAddress(const std::string& serverIPAddress, uint16_t serverPortNumber) {
+    return !serverIPAddress.empty() && serverPortNumber != 0;
 }
 
 /**
@@ -109,13 +99,22 @@ bool Client::createSocket() {
 bool Client::connectToServer() {
     addrinfo hints{};
     hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_socktype = SOCK_DGRAM; // UDP socket
     hints.ai_protocol = IPPROTO_UDP;
 
     addrinfo* result = nullptr;
     if (getaddrinfo(serverIP.c_str(), std::to_string(serverPort).c_str(), &hints, &result) != 0) {
-        std::cerr << "getaddrinfo failed." << std::endl;
-        WSACleanup();
+        std::cerr << "getaddrinfo failed: " << WSAGetLastError() << std::endl;
+        return false;
+    }
+
+    // Copy resolved address into serverSockAddr
+    if (result && result->ai_family == AF_INET) {
+        memcpy(&serverSockAddr, result->ai_addr, sizeof(sockaddr_in));
+    }
+    else {
+        std::cerr << "Invalid address family." << std::endl;
+        freeaddrinfo(result);
         return false;
     }
 
@@ -131,7 +130,7 @@ bool Client::connectToServer() {
  */
 void Client::run() {
     sendToServerUdp();
-    std::thread(&Client::handleNetwork, this).detach();
+    std::thread(&Client::receiveNetworkMessages, this).detach();
 }
 
 /**
@@ -139,7 +138,7 @@ void Client::run() {
  * @param scriptPath Path to the script file containing commands
  */
 void Client::runScript(const std::string& scriptPath) {
-    std::thread(&Client::handleNetwork, this).detach();
+    std::thread(&Client::receiveNetworkMessages, this).detach();
     sendToServerUdp();
 }
 
@@ -200,9 +199,7 @@ void Client::sendToServerUdp() {
 
     // Store server address and send
     udpMessage.clientAddr = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
-    if (sendto(clientSocket, udpMessage.data, strlen(udpMessage.data), 0,
-        reinterpret_cast<sockaddr*>(&udpMessage.clientAddr),
-        sizeof(udpMessage.clientAddr)) == SOCKET_ERROR) {
+    if (sendto(clientSocket, udpMessage.data, static_cast<int>(strlen(udpMessage.data)), 0, reinterpret_cast<sockaddr*>(&udpMessage.clientAddr), sizeof(udpMessage.clientAddr)) == SOCKET_ERROR) {
         std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
     }
 
@@ -213,46 +210,53 @@ void Client::sendToServerUdp() {
  * @brief Handles incoming network messages in a separate thread
  * Processes player updates, asteroid data, bullet data, and score updates
  */
-void Client::handleNetwork() {
+void Client::receiveNetworkMessages() {
     sockaddr_in serverAddr{};
     int addrSize = sizeof(serverAddr);
     char receiveBuffer[1024];
 
     while (true) {
-        int receivedBytes = recvfrom(clientSocket, receiveBuffer, sizeof(receiveBuffer), 0,
-            (sockaddr*)&serverAddr, &addrSize);
+        int receivedBytes = recvfrom(clientSocket, receiveBuffer, sizeof(receiveBuffer), 0, (sockaddr*)&serverAddr, &addrSize);
+
         if (receivedBytes <= 0) continue;
 
-        receiveBuffer[receivedBytes] = '\0';
+        // Safely null-terminate the received data
+        if (receivedBytes < sizeof(receiveBuffer)) {
+            receiveBuffer[receivedBytes] = '\0';
+        }
+        else {
+            receiveBuffer[sizeof(receiveBuffer) - 1] = '\0';  // Ensure null-termination if max size reached
+        }
+
         std::string receivedData(receiveBuffer, receivedBytes);
 
         // Handle player ID assignment
         if (receivedBytes <= 3 && playerID == -1) {
             playerID = std::stoi(receiveBuffer);
-            std::cout << "Assigned Player ID: " << playerID << std::endl;
+            std::cout << "Player ID: " << playerID << std::endl;
             continue;
         }
 
         // Process asteroid data
         if (receivedData.find("ASTEROIDS") == 0) {
-            processAsteroidData(receivedData);
+            updateAsteroidsFromNetwork(receivedData);
             continue;
         }
 
         // Process bullet data
         if (receivedData.find("BULLETS") == 0) {
-            processBulletData(receivedData);
+            updateBulletsFromNetwork(receivedData);
             continue;
         }
 
         // Process score updates
         if (receivedData.find("SCORE_UPDATE") == 0) {
-            processScoreUpdate(receivedData);
+            updateScoresFromNetwork(receivedData);
             continue;
         }
 
         // Process general player data
-        processPlayerData(receivedData);
+        updatePlayersFromNetwork(receivedData);
     }
 }
 
@@ -260,7 +264,7 @@ void Client::handleNetwork() {
  * @brief Processes asteroid data updates from server
  * @param data The received asteroid data string
  */
-void Client::processAsteroidData(const std::string& data) {
+void Client::updateAsteroidsFromNetwork(const std::string& data) {
     std::lock_guard<std::mutex> lock(asteroidsMutex);
     auto currentTime = std::chrono::steady_clock::now();
     std::vector<std::string> updatedIds;
@@ -345,7 +349,7 @@ void Client::processAsteroidData(const std::string& data) {
  * @brief Processes bullet data updates from server
  * @param data The received bullet data string
  */
-void Client::processBulletData(const std::string& data) {
+void Client::updateBulletsFromNetwork(const std::string& data) {
     std::lock_guard<std::mutex> lock(bulletsMutex);
     static int debugCounter = 0;
     if (++debugCounter % 100 == 0) {
@@ -412,7 +416,7 @@ void Client::processBulletData(const std::string& data) {
  * @brief Processes score updates from server
  * @param data The received score data string
  */
-void Client::processScoreUpdate(const std::string& data) {
+void Client::updateScoresFromNetwork(const std::string& data) {
     size_t pos = data.find('|');
     if (pos != std::string::npos) {
         std::string scoreData = data.substr(pos + 1);
@@ -428,7 +432,7 @@ void Client::processScoreUpdate(const std::string& data) {
  * @brief Processes general player data updates
  * @param data The received player data string
  */
-void Client::processPlayerData(const std::string& data) {
+void Client::updatePlayersFromNetwork(const std::string& data) {
     std::istringstream str(data);
     PlayerData p;
     while (str >> p.playerID >> p.X >> p.Y >> p.rotation >> p.score >> p.clientIP) {
@@ -443,9 +447,9 @@ void Client::processPlayerData(const std::string& data) {
  * @brief Reports asteroid destruction to the server
  * @param asteroidID The ID of the destroyed asteroid
  */
-void Client::reportAsteroidDestruction(const std::string& asteroidID) {
+void Client::sendAsteroidDestructionEvent(const std::string& asteroidID) {
     std::string message = "DESTROY_ASTEROID|" + asteroidID;
-    sendServerMessage(message);
+    sendRawMessage(message);
 }
 
 /**
@@ -453,9 +457,9 @@ void Client::reportAsteroidDestruction(const std::string& asteroidID) {
  * @param playerID The ID of the player
  * @param score The new score value
  */
-void Client::reportPlayerScore(const std::string& playerID, int score) {
-    std::string message = "UPDATE_SCORE|" + playerID + " " + std::to_string(score);
-    sendServerMessage(message);
+void Client::sendScoreUpdateEvent(const std::string& pid, int score) {
+    std::string message = "UPDATE_SCORE|" + pid + " " + std::to_string(score);
+    sendRawMessage(message);
 }
 
 /**
@@ -465,31 +469,31 @@ void Client::reportPlayerScore(const std::string& playerID, int score) {
  * @param dir The bullet's direction
  * @param bulletID Optional bullet identifier
  */
-void Client::reportBulletCreation(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
+void Client::sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "ERROR: Cannot send bullet creation - socket is invalid!" << std::endl;
         return;
     }
 
-    std::string finalBulletID = bulletID.empty() ?
-        std::to_string(playerID) + "_" +
-        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) :
-        bulletID;
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 
-    std::string message = "BULLET_CREATE " +
-        std::to_string(pos.x) + " " + std::to_string(pos.y) + " " +
-        std::to_string(vel.x) + " " + std::to_string(vel.y) + " " +
-        std::to_string(dir) + " " + finalBulletID;
+    std::string finalBulletID = bulletID.empty() ? std::to_string(playerID) + "_" + std::to_string(millis) : bulletID;
 
-    sendServerMessage(message);
-    std::cout << "Sent bullet creation message to server with ID: " << finalBulletID << std::endl;
+    std::ostringstream oss;
+    oss << "BULLET_CREATE "
+        << pos.x << " " << pos.y << " "
+        << vel.x << " " << vel.y << " "
+        << dir << " " << finalBulletID;
+
+    sendRawMessage(oss.str());
 }
 
 /**
  * @brief Helper method to send messages to server
  * @param message The message to send
  */
-void Client::sendServerMessage(const std::string& message) {
+void Client::sendRawMessage(const std::string& message) {
     addrinfo hints{};
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -502,8 +506,7 @@ void Client::sendServerMessage(const std::string& message) {
     }
 
     sockaddr_in serverAddress = *reinterpret_cast<sockaddr_in*>(result->ai_addr);
-    if (sendto(clientSocket, message.c_str(), message.length(), 0,
-        reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR) {
+    if (sendto(clientSocket, message.c_str(), static_cast<int>(message.length()), 0, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR) {
         std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
     }
 
@@ -514,30 +517,68 @@ void Client::sendServerMessage(const std::string& message) {
 
 /**
  * @brief Displays current player scores in a formatted table
+ * @details Shows player ID, score, and position in a consistent layout.
+ *          Highlights the current player with "[YOU]" marker.
+ * @note Thread-safe - locks playersMutex during operation
  */
 void Client::displayPlayerScores() {
     std::lock_guard<std::mutex> lock(playersMutex);
 
-    std::cout << "\n================= PLAYER SCORES ==================" << std::endl;
-    std::cout << "Player ID          Score          Position" << std::endl;
-    std::cout << "--------------------------------------------------" << std::endl;
+    const int ID_WIDTH = 10;
+    const int SCORE_WIDTH = 10;
+    const int POS_WIDTH = 20; // Total space for position + [YOU]
+    const int TOTAL_WIDTH = ID_WIDTH + SCORE_WIDTH + POS_WIDTH;
 
-    for (const auto& pair : players) {
-        const PlayerData& player = pair.second;
-        std::cout << pair.first << "                  "
-            << player.score << "              ("
-            << std::fixed << std::setprecision(1) << player.X << ", "
-            << std::fixed << std::setprecision(1) << player.Y << ")"
-            << (pair.first == playerID ? " [YOU]" : "") << std::endl;
+    // Header
+    std::cout << "\n" << std::string(TOTAL_WIDTH, '=') << "\n";
+    std::cout << "SCORES\n";
+    std::cout << std::string(TOTAL_WIDTH, '=') << "\n";
+
+    // Column headers
+    std::cout << std::left
+        << std::setw(ID_WIDTH) << "ID"
+        << std::setw(SCORE_WIDTH) << "SCORE"
+        << std::setw(POS_WIDTH) << "POSITION"
+        << "\n";
+
+    std::cout << std::string(TOTAL_WIDTH, '-') << "\n";
+
+    // Rows
+    for (const auto& playerEntry : players) {
+        const int id = playerEntry.first;
+        const PlayerData& player = playerEntry.second;
+
+        std::ostringstream posStream;
+        posStream << "(" << std::fixed << std::setprecision(1) << player.X << ", " << player.Y << ")";
+
+        std::string positionStr = posStream.str();
+
+        if (id == playerID) {
+            // Append [YOU] and ensure total length fits within POS_WIDTH
+            const std::string youTag = " [YOU]";
+            int maxLen = POS_WIDTH - 1; // -1 for safety padding
+            if ((int)(positionStr.length() + youTag.length()) > maxLen) {
+                // Truncate position if needed
+                positionStr = positionStr.substr(0, maxLen - youTag.length());
+            }
+            positionStr += youTag;
+        }
+
+        std::cout << std::left << std::setw(ID_WIDTH) << id
+            << std::left << std::setw(SCORE_WIDTH) << player.score
+            << std::left << std::setw(POS_WIDTH) << positionStr
+            << "\n";
     }
 
-    std::cout << "--------------------------------------------------" << std::endl;
+    std::cout << std::string(TOTAL_WIDTH, '-') << std::endl;
 }
 
 /**
  * @brief Updates asteroid positions using interpolation for smooth movement
  */
 void updateAsteroidInterpolation() {
+    constexpr float INTERPOLATION_DURATION = 0.1f; // 100ms window
+
     std::lock_guard<std::mutex> lock(asteroidsMutex);
     auto currentTime = std::chrono::steady_clock::now();
 
@@ -546,10 +587,9 @@ void updateAsteroidInterpolation() {
         if (!asteroid.isActive) continue;
 
         float deltaTime = std::chrono::duration<float>(currentTime - asteroid.lastUpdateTime).count();
-        const float interpolationDuration = 0.1f; // 100ms interpolation window
 
-        if (deltaTime < interpolationDuration) {
-            float interpolationFactor = deltaTime / interpolationDuration;
+        if (deltaTime < INTERPOLATION_DURATION) {
+            float interpolationFactor = deltaTime / INTERPOLATION_DURATION;
             asteroid.currentX += (asteroid.targetX - asteroid.currentX) * interpolationFactor;
             asteroid.currentY += (asteroid.targetY - asteroid.currentY) * interpolationFactor;
         }
@@ -563,9 +603,11 @@ void updateAsteroidInterpolation() {
 /**
  * @brief Cleans up network resources
  */
-void Client::cleanup() {
+void Client::cleanup() noexcept {
     if (clientSocket != INVALID_SOCKET) {
         closesocket(clientSocket);
+        clientSocket = INVALID_SOCKET; // Prevent double-close
     }
-    WSACleanup();
+    // Winsock cleanup is now automatic when winsock is destroyed
+    winsock.reset();  // Explicit cleanup (optional - will happen anyway when Client is destroyed)
 }

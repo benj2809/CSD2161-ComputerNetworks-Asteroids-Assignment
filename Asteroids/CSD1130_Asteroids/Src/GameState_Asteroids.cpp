@@ -466,7 +466,7 @@ void GameStateAsteroidsUpdate(void)
 					Client::unlockBullets();
 
 					// Report to server
-					globalClient.reportBulletCreation(bulletPos, bulletVel, spShip->dirCurr, bulletID);
+					globalClient.sendBulletCreationEvent(bulletPos, bulletVel, spShip->dirCurr, bulletID);
 
 					std::cout << "Created local bullet with ID: " << bulletID << std::endl;
 				}
@@ -896,14 +896,14 @@ void checkBulletAsteroidCollisions() {
 				//	<< " and asteroid " << asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
-				globalClient.reportAsteroidDestruction(asteroidPair.first);
+				globalClient.sendAsteroidDestructionEvent(asteroidPair.first);
 
 				// Update the player's score
 				int playerID = Client::getPlayerID();
 				if (players.find(playerID) != players.end()) {
 					players[playerID].score += 100; // Increment the player's score by 100
 
-					globalClient.reportPlayerScore(players[playerID].clientIP, players[playerID].score);
+					globalClient.sendScoreUpdateEvent(players[playerID].clientIP, players[playerID].score);
 				}
 
 				// Remove the bullet from the local list
@@ -948,7 +948,7 @@ void checkBulletAsteroidCollisions() {
 				//	<< asteroidPair.first << std::endl;
 
 				// Report asteroid destruction to server
-				globalClient.reportAsteroidDestruction(asteroidPair.first);
+				globalClient.sendAsteroidDestructionEvent(asteroidPair.first);
 				// Update the player's score
 				int playerID = Client::getPlayerID();
 				//Get the port number of the client 
@@ -967,7 +967,7 @@ void checkBulletAsteroidCollisions() {
 				}
 				if (players.find(playerID) != players.end()) {
 					Playerscore += 100; // Increment the player's score by 100
-					globalClient.reportPlayerScore(players[playerID].clientIP +":"+ std::to_string(port_out), Playerscore);
+					globalClient.sendScoreUpdateEvent(players[playerID].clientIP +":"+ std::to_string(port_out), Playerscore);
 				}
 				// Destroy the bullet game object
 				gameObjInstDestroy(bullet);
@@ -1271,8 +1271,8 @@ void renderServerAsteroids() {
 	}
 }
 
-void DisplayScores(const std::unordered_map<int, PlayerData>& players, int playerID) {
-	for (const auto& pair : players) {
+void DisplayScores(const std::unordered_map<int, PlayerData>& gamePlayers, int playerID) {
+	for (const auto& pair : gamePlayers) {
 		const PlayerData& player = pair.second; // Get player data
 
 		// Positioning
