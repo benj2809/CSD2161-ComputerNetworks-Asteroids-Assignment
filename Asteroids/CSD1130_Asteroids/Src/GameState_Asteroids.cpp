@@ -26,12 +26,14 @@ const unsigned int GAME_OBJ_INST_NUM_MAX = 2048;
 const unsigned int SHIP_INITIAL_NUM = 3;
 
 // Object scales
-const float SHIP_SCALE_X = 16.0f;
-const float SHIP_SCALE_Y = 16.0f;
+const float SHIP_SCALE_X = 15.0f;
+const float SHIP_SCALE_Y = 15.0f;
 const float BULLET_SCALE_X = 20.0f;
 const float BULLET_SCALE_Y = 3.0f;
-const float ASTEROID_MAX_SCALE_X = 60.0f;
-const float ASTEROID_MAX_SCALE_Y = 60.0f;
+const float ASTEROID_MIN_SCALE_X = 15.0f;
+const float ASTEROID_MAX_SCALE_X = 50.0f;
+const float ASTEROID_MIN_SCALE_Y = 15.0f;
+const float ASTEROID_MAX_SCALE_Y = 50.0f;
 
 // Movement parameters
 const float SHIP_ACCEL_FORWARD = 100.0f;
@@ -41,17 +43,15 @@ const float BULLET_SPEED = 500.0f;
 const float BOUNDING_RECT_SIZE = 1.0f;
 
 // Game state
-static bool onValueChange{ true };
-bool gameOver = false;
-bool winnerAnnounced = false;
+static bool updateValue{true};
+bool endGame = false;
+int winningPlayerID = -1; // Initialize winningPlayerID to -1 to indicate no winner yet
 int playerCount = 1;
 
 enum TYPE {
 	TYPE_SHIP = 0,
 	TYPE_BULLET,
 	TYPE_ASTEROID,
-	TYPE_WALL,
-	TYPE_NUM
 };
 
 // Object structures
@@ -271,19 +271,6 @@ void GameStateAsteroidsLoad(void)
 		0.5f, 0.5f, 0xFF808080, 0.0f, 0.0f);
 	pObj->pMesh = AEGfxMeshEnd();
 	AE_ASSERT_MESG(pObj->pMesh, "Failed to create asteroid object mesh!");
-
-	// Create the wall shape mesh.
-	pObj = sGameObjList + sGameObjNum++;
-	pObj->type = TYPE_WALL;
-	AEGfxMeshStart();
-	AEGfxTriAdd(-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
-		0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f,
-		-0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f);
-	AEGfxTriAdd(-0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
-		0.5f, -0.5f, 0x6600FF00, 0.0f, 0.0f,
-		0.5f, 0.5f, 0x6600FF00, 0.0f, 0.0f);
-	pObj->pMesh = AEGfxMeshEnd();
-	AE_ASSERT_MESG(pObj->pMesh, "Failed to create wall object mesh!");
 }
 
 /******************************************************************************/
@@ -320,7 +307,6 @@ void GameStateAsteroidsInit(void)
 
 	// Reset score and lives.
 	shipScore = 0;
-	shipLives = SHIP_INITIAL_NUM;
 }
 
 /******************************************************************************/ 
@@ -337,85 +323,81 @@ void GameStateAsteroidsInit(void)
 void GameStateAsteroidsUpdate(void)
 {
 	// Track previous scores to detect changes
-	static std::unordered_map<int, int> previousScores;
-	static bool scoresChanged = false;
+	static std::unordered_map<int, int> old_score;
+	static bool newscore_flag = false;
+	static bool gameOverMessageShown = false;
 
-	// Check if any scores have changed
-	scoresChanged = false;
-	for (const auto& pair : players) {
-		int id = pair.first;
-		int currentScore = pair.second.score;
+	newscore_flag = false;
+	for (auto it = players.begin(); it != players.end(); ++it)
+	{
+		int id = it->first;
+		const PlayerData& player = it->second;
 
-		// Check if this player's score is different from last time
-		if (previousScores.find(id) == previousScores.end() || previousScores[id] != currentScore) {
-			previousScores[id] = currentScore;
-			scoresChanged = true;
+		std::unordered_map<int, int>::iterator scoreIt = old_score.find(id);
+
+		if (scoreIt == old_score.end())
+		{
+			old_score[id] = player.score;
+			newscore_flag = true;
+		}
+		else if (scoreIt->second != player.score)
+		{
+			scoreIt->second = player.score;
+			newscore_flag = true;
 		}
 
-		// Check if any player has reached 1000 points (new game over condition)
-		if (currentScore >= 1000 && !gameOver) {
-			gameOver = true;
-			std::cout << "\n=== GAME OVER ===\n";
-			std::cout << "Player " << id << " has reached 1000 points!" << std::endl;
+
+		if (player.score >= 2500 && !endGame)
+		{
+			endGame = true;
+			winningPlayerID = id;
 		}
 	}
 
-	// Also check if the number of players changed
-	if (previousScores.size() != players.size()) {
-		scoresChanged = true;
+	if (old_score.size() != players.size()) {
+		newscore_flag = true;
 	}
 
-	// Display scores only when they've changed
-	if (scoresChanged) {
+	if (newscore_flag) {
 		GameClient::displayPlayerScores();
 	}
 
-	// Clean up scores for players who are no longer present
-	for (auto it = previousScores.begin(); it != previousScores.end();) {
+	for (auto it = old_score.begin(); it != old_score.end();) {
 		if (players.find(it->first) == players.end()) {
-			it = previousScores.erase(it);
+			it = old_score.erase(it);
 		}
 		else {
 			++it;
 		}
 	}
 
-	// If the game is over, you might want to return early to skip further game logic
-	if (gameOver && !winnerAnnounced) {
-		// Announce the winner when the game is over
-		// Find the highest score
-		int maxScore = -1;
-		std::unordered_map<int, std::string> winnerIDs;  // Store player IDs if there are ties
-		for (const auto& pair : players) {
-			if (pair.second.score > maxScore) {
-				maxScore = pair.second.score;
-				winnerIDs.clear();  // Clear previous ties, as we found a new max score
-				winnerIDs[pair.first] = "";  // Store player ID
+	// Game over condition
+	if (endGame) {
+		int high_score = -1;
+		std::vector<int> highscoring_player;
+
+		for (auto it = players.begin(); it != players.end(); ++it)
+		{
+			int id = it->first;
+			const PlayerData& player = it->second;
+
+			if (player.score > high_score)
+			{
+				high_score = player.score;
+				highscoring_player.clear();
+				highscoring_player.push_back(id);
 			}
-			else if (pair.second.score == maxScore) {
-				winnerIDs[pair.first] = "";  // Add the tied player ID
+			else if (player.score == high_score)
+			{
+				highscoring_player.push_back(id);
 			}
 		}
 
-		// Output the winner(s) only once
-		if (winnerIDs.size() == 1) {
-			std::cout << "\n=== WINNER ===\n";
-			std::cout << "The winner is player with ID: " << winnerIDs.begin()->first << " with " << maxScore << " points!" << std::endl;
-		}
-		else {
-			std::cout << "\n=== IT'S A TIE ===\n";
-			std::cout << "The following players tied with " << maxScore << " points:\n";
-			for (const auto& winner : winnerIDs) {
-				std::cout << "Player ID: " << winner.first << std::endl;
-			}
-		}
-		winnerAnnounced = true;
-
-		return;  // Exit early to skip the rest of the game logic
+		return;
 	}
 
 	// Only process input if the player hasn't won or lost yet
-	if (shipScore < 5000 && shipLives >= 0) {
+	if (shipScore < 2500) {
 
 		// --- Movement: Forward ---
 		if (AEInputCheckCurr(AEVK_UP)) {
@@ -471,17 +453,19 @@ void GameStateAsteroidsUpdate(void)
 			if (newBullet) {
 				std::string uniqueBulletID = std::to_string(GameClient::getPlayerID()) + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 
-				GameClient::ScopedBulletLock lock;
-				BulletData bulletInfo;
-				bulletInfo.bulletID = uniqueBulletID;
-				bulletInfo.X = bulletSpawnPos.x;
-				bulletInfo.Y = bulletSpawnPos.y;
-				bulletInfo.velocityX = bulletVelocity.x;
-				bulletInfo.velocityY = bulletVelocity.y;
-				bulletInfo.direction = ship->dirCurr;
-				bulletInfo.fromLocalPlayer = true;
-				bullets[uniqueBulletID] = bulletInfo;
-				bulletArray.push_back(newBullet);
+				{
+					GameClient::ScopedBulletLock lock;
+					BulletData bulletInfo;
+					bulletInfo.bulletID = uniqueBulletID;
+					bulletInfo.X = bulletSpawnPos.x;
+					bulletInfo.Y = bulletSpawnPos.y;
+					bulletInfo.velocityX = bulletVelocity.x;
+					bulletInfo.velocityY = bulletVelocity.y;
+					bulletInfo.direction = ship->dirCurr;
+					bulletInfo.fromLocalPlayer = true;
+					bullets[uniqueBulletID] = bulletInfo;
+					bulletArray.push_back(newBullet);
+				}
 
 				globalClient.sendBulletCreationEvent(bulletSpawnPos, bulletVelocity, ship->dirCurr, uniqueBulletID);
 			}
@@ -491,7 +475,6 @@ void GameStateAsteroidsUpdate(void)
 	// ======================================================================
 	// Save previous positions
 	//  -- For all instances
-	// [DO NOT UPDATE THIS PARAGRAPH'S CODE]
 	// ======================================================================
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
@@ -527,75 +510,214 @@ void GameStateAsteroidsUpdate(void)
 	}
 
 	// ======================================================================
-	// check for dynamic-static collisions (one case only: Ship vs Wall)
-	// [DO NOT UPDATE THIS PARAGRAPH'S CODE]
+	// check for collisions
 	// ======================================================================
 
-	//======================================================================
-	//check for dynamic-dynamic collisions [AA-BB] 
-	//======================================================================
-	if (!(shipScore >= 5000)) { // Just like movement, collision only takes place when the game is active.
-		if (!(shipLives < 0)) {
-			for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) { // For loop 1: This will iterate for each game object instance.
-				GameObjInst* pInst = sGameObjInstList + i; // To access each game object instance...
-				if ((pInst->flag & FLAG_ACTIVE) == 0) continue; // If the instance is not active (indicated by pInst->flag, which is 1 when the instance is active), continue to the next iteration.
-				if (pInst->pObject->type == TYPE_ASTEROID) { // Checking if the current instance is of type ASTEROID, which is the instance we are checking for collision for.
-					for (int j = 0; j < GAME_OBJ_INST_NUM_MAX; ++j) { // For loop 2: To iterate through all the other instances to check for collision with the ASTEROID.
-						GameObjInst* NewpInst = sGameObjInstList + j; // To access the other instances...
-						if ((NewpInst->flag & FLAG_ACTIVE) == 0) continue; // If the current instance is not active, skip.
-						if (NewpInst->pObject->type == TYPE_ASTEROID) continue; // If the current instance is of type ASTEROID as well, skip, since there is no ASTEROID - ASTEROID collision.
+	if (shipScore < 2500) {
+		//for collision between rect-rect function 
+		float tfirst = 0;
+		// ======================================================================
+		// check for dynamic-dynamic collisions
+		// ======================================================================
+		for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
+		{
+			GameObjInst* pInst = sGameObjInstList + i;
 
-						float tFirst = 0.0f;
+			// skip non-active object
+			if ((pInst->flag & FLAG_ACTIVE) == 0) {
+				continue;
+			}
 
-						if (NewpInst->pObject->type == TYPE_SHIP) { // If the current instance is the ship, check for collision.
-							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr, ship->boundingBox, ship->velCurr,
-								tFirst)) { // This if condition checks between the min & max for the SHIP x/y coordinates against the ASTEROID																																																										// It is important to check for both ASTEROID - SHIP and SHIP - ASTEROID collisions, this confirms there is a collision b/w both objects																																																						// If either one of the checks is to be omitted, the will be a case where no collision is detected when either object is WITHIN the other.
-								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision																																									
-								gameObjInstDestroy(ship); // Likewise destroy the ship
-								AEVec2 scale{ SHIP_SCALE_X, SHIP_SCALE_Y }; // The following vectors are the initial vectors for the ship.
-								ship = gameObjInstCreate(TYPE_SHIP, &scale, nullptr, nullptr, 0.0f);
-								AEVec2 scale2{ (f32)(rand() % (60 - 10 + 1) + 10) , (f32)(rand() % (60 - 10 + 1) + 10) }, pos{ (f32)(rand() % (900 - (-500) + 1) + (-500)), 400.f }, vel{ (f32)(rand() % (100 - (-100) + 1) + (-100)),  (f32)(rand() % (100 - (-100) + 1) + (-100)) };
-								gameObjInstCreate(TYPE_ASTEROID, &scale2, &pos, &vel, 0.0f); // Creating a new ship at the the center of the screen.
-								--shipLives; // Decrement ship lives
-								onValueChange = true; // Setting this to true to print to the user their current score and amount of ship lives left.
+			if (pInst->pObject->type == TYPE_ASTEROID) {
+				for (unsigned long j = 0; j < GAME_OBJ_INST_NUM_MAX - 1; j++) {
+					int asteroid_max_vel = 200;
+					int corner = rand() % 4;
+					int width = 0;
+					int height = 0;
+					int x = 0;
+					int y = 0;
+					float vel_y = 0.0f;
+					float vel_x = 0.0f;
+					float scale_y = 0.0f;
+					float scale_x = 0.0f;
+
+					if (i == j) {
+						continue;
+					}
+					GameObjInst* next_obj = sGameObjInstList + j;
+
+					if ((next_obj->flag & FLAG_ACTIVE) == 0) {
+						continue;
+					}
+					if (next_obj->pObject->type == TYPE_ASTEROID || (next_obj->flag & FLAG_ACTIVE) == 0) {
+						continue;
+					}
+					if (next_obj->pObject->type == TYPE_SHIP) {
+						//if there is collision between ship and asteroid, ship lives -1. If ship lives reaches below 0, reset position and velocity to 0.
+						if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr, next_obj->boundingBox, next_obj->velCurr, tfirst)) {
+							updateValue = true;
+
+							if (shipLives < 0) {
+								next_obj->velCurr.x = 0;
+								next_obj->velCurr.y = 0;
+								next_obj->posCurr.x = 0;
+								next_obj->posCurr.y = 0;
+
 							}
-						}
-						else if (NewpInst->pObject->type == TYPE_BULLET) { // If the current instance is a bullet, eheck for collision.
-							if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr,
-								NewpInst->boundingBox, NewpInst->velCurr,
-								tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
 
-								// Removing pointer of destroyed bullet from bulletArray container.
-								bulletArray.erase(std::remove_if(bulletArray.begin(), bulletArray.end(),
-									[pInst](GameObjInst* bullet) {
-										return bullet == pInst;
-									}), bulletArray.end());
+							gameObjInstDestroy(pInst);
+							next_obj->posCurr.x = 0;
+							next_obj->posCurr.y = 0;
+							next_obj->dirCurr = 0;
+							//random asteroid pos velocity
 
-								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision.
-								gameObjInstDestroy(NewpInst); // Likewise destroy the bullet.
-								AEVec2 scale{ (f32)(rand() % (60 - 10 + 1) + 10), (f32)(rand() % (60 - 10 + 1) + 10) }, pos{ (f32)(rand() % (900 - (-500) + 1) + (-500)), 400.f }, vel{ (f32)(rand() % (100 - (-100) + 1) + (-100)), (f32)(rand() % (100 - (-100) + 1) + (-100)) }; // Setting random values for the new ASTEROID to be created.
-								gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f); // Creating a new ASTEROID instance with random values.
-								AEVec2Scale(&pos, &pos, -1.f); // Modifying position for the 2nd ASTEROID
-								AEVec2Scale(&vel, &vel, -1.3f); // Modifying velocity for the 2nd ASTEROID
-								gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f); // Creating a new ASTEROID with modified values. 
-								shipScore += 100; // Incrementing the score.
-								onValueChange = true; // Setting to print the current score and number of ship lives left.
+							for (int ran = 0; ran < 1; ran++) {
+
+
+								//spawn top corner
+								//Randomnise new asteroid size and velocity 
+								if (corner == 0) {
+									width = (rand() % 2 == 0) ? 1 : -1;
+									x = rand() % (AEGfxGetWindowWidth() / 2) * width;
+									y = (AEGfxGetWindowHeight() / 2);
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+
+
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+
+
+
+								}
+								//spawn bottom corner
+								if (corner == 1) {
+									width = (rand() % 2 == 0) ? 1 : -1;
+									x = rand() % (AEGfxGetWindowWidth() / 2) * width;
+									y = -(AEGfxGetWindowHeight() / 2);
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+
+								}
+								//left corner
+								if (corner == 2) {
+									height = (rand() % 2 == 0) ? 1 : -1;
+									y = rand() % (AEGfxGetWindowWidth() / 2) * height;
+									x = -(AEGfxGetWindowHeight() / 2);
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+
+								}
+								//right corner
+								if (corner == 3) {
+									height = (rand() % 2 == 0) ? 1 : -1;
+									y = rand() % (AEGfxGetWindowWidth() / 2) * height;
+									x = (AEGfxGetWindowHeight() / 2);
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+
+								}
+								//set and create new asteroid
+								AEVec2 scale, pos, vel;
+								pos.x = static_cast<float>(x);
+								pos.y = static_cast<float>(y);
+								vel.x = vel_x;
+								vel.y = vel_y;
+								scale.x = scale_x;
+								scale.y = scale_y;
+								AEVec2Set(&scale, scale.x, scale.y);
+								gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+
 							}
+
 						}
 					}
+					//if asteroid and bullet collides
+					if (next_obj->pObject->type == TYPE_BULLET) {
+						if (CollisionIntersection_RectRect(pInst->boundingBox, pInst->velCurr, next_obj->boundingBox, next_obj->velCurr, tfirst)) {
+
+							gameObjInstDestroy(pInst);
+							gameObjInstDestroy(next_obj);
+							shipScore += 100;
+							updateValue = true;
+							// will randonmly spawn either 1 or 2 asteroid with different scaling and velocity
+							for (int bull = 0; bull < 1 + rand() % 2; bull++) {
+
+
+								//spawn top border
+								if (corner == 0) {
+									width = (rand() % 2 == 0) ? 1 : -1;
+									x = rand() % (AEGfxGetWindowWidth() / 2) * width;
+									y = (AEGfxGetWindowHeight() / 2);
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+
+								}
+								//spawn bottom corner
+								if (corner == 1) {
+									width = (rand() % 2 == 0) ? 1 : -1;
+									x = rand() % (AEGfxGetWindowWidth() / 2) * width;
+									y = -(AEGfxGetWindowHeight() / 2);
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+								}
+								//left corner
+								if (corner == 2) {
+									height = (rand() % 2 == 0) ? 1 : -1;
+									y = rand() % (AEGfxGetWindowWidth() / 2) * height;
+									x = -(AEGfxGetWindowHeight() / 2);
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+								}
+								//right corner
+								if (corner == 3) {
+									height = (rand() % 2 == 0) ? 1 : -1;
+									y = rand() % (AEGfxGetWindowWidth() / 2) * height;
+									x = (AEGfxGetWindowHeight() / 2);
+									vel_y = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									vel_x = (rand() % 2 == 0) ? static_cast<float>(1 * (rand() % asteroid_max_vel)) : static_cast<float>(-1 * (rand() % asteroid_max_vel));
+									scale_x = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_X - ASTEROID_MIN_SCALE_X));
+									scale_y = static_cast<float>(rand() % static_cast<int>(ASTEROID_MAX_SCALE_Y - ASTEROID_MIN_SCALE_Y));
+								}
+								//set new asteroid scaling and velocity.
+								AEVec2 scale, pos, vel;
+								pos.x = static_cast<float>(x);
+								pos.y = static_cast<float>(y);
+								vel.x = vel_x;
+								vel.y = vel_y;
+								scale.x = scale_x;
+								scale.y = scale_y;
+								AEVec2Set(&scale, scale.x, scale.x);
+								gameObjInstCreate(TYPE_ASTEROID, &scale, &pos, &vel, 0.0f);
+
+							}
+
+						}
+					}
+
+
 				}
+
 			}
 		}
+
 	}
 
 	// ===================================================================
 	// update active game object instances
-	// Example:
-	//		-- Wrap specific object instances around the world (Needed for the assignment)
-	//		-- Removing the bullets as they go out of bounds (Needed for the assignment)
-	//		-- If you have a homing missile for example, compute its new orientation 
-	//			(Homing missiles are not required for the Asteroids project)
-	//		-- Update a particle effect (Not required for the Asteroids project)
 	// ===================================================================
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
@@ -758,20 +880,13 @@ void GameStateAsteroidsDraw(void)
 	renderAsteroids();
 	renderNetworkBullets();
 
-	// Display ship lives and score values to the user if there are updates
-	if (onValueChange)
+	if (updateValue)
 	{
-		onValueChange = false;
-
-		// Display Game Over message when lives are exhausted
-		if (shipLives < 0)
-		{
-			printf("       GAME OVER       \n");
-		}
+		updateValue = false;
 	}
 
 	// Display winner if the game is over
-	if (gameOver)
+	if (endGame)
 	{
 		// Render "GAME OVER" message
 		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
@@ -779,7 +894,16 @@ void GameStateAsteroidsDraw(void)
 		AEGfxTextureSet(NULL, 0, 0);
 		AEGfxSetTransparency(1.0f);
 
-		AEGfxPrint(fontId, "GAME OVER", -0.5f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+		AEGfxPrint(fontId, "GAME OVER", -0.45f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+
+		char winText[64];
+		if (winningPlayerID != -1) {
+			snprintf(winText, sizeof(winText), "Player %d Wins!", winningPlayerID);
+		}
+		else {
+			snprintf(winText, sizeof(winText), "YOU WIN");
+		}
+		AEGfxPrint(fontId, winText, -0.3f, -0.70f, 2.0f, 0.0f, 1.0f, 0.0f, 1.0f);
 	}
 
 	// Render player names on the screen

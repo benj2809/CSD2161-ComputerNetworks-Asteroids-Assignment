@@ -542,7 +542,7 @@ void GameClient::displayPlayerScores() {
 
     const int ID_WIDTH = 10;
     const int SCORE_WIDTH = 10;
-    const int POS_WIDTH = 20; // Total space for position + [YOU]
+    const int POS_WIDTH = 23; // Total space for position + [YOU], take into account -x/-y and 3 digit values with 1 decimal places
     const int TOTAL_WIDTH = ID_WIDTH + SCORE_WIDTH + POS_WIDTH;
 
     // Header

@@ -75,13 +75,14 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 		AESysReset();
 
 		// If not restarting, load the gamestate
-		if(gGameStateCurr != GS_RESTART)
+		if (gGameStateCurr != GS_RESTART)
 		{
 			GameStateMgrUpdate();
 			GameStateLoad();
 		}
-		else
+		else {
 			gGameStateNext = gGameStateCurr = gGameStatePrev;
+		}
 
 		// Initialize the gamestate
 		GameStateInit();
@@ -98,8 +99,9 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 				AESysFrameEnd();
 
 				// check if forcing the application to quit
-				if ((AESysDoesWindowExist() == false) || AEInputCheckTriggered(AEVK_ESCAPE))
+				if ((AESysDoesWindowExist() == false) || AEInputCheckTriggered(AEVK_ESCAPE)) {
 					gGameStateNext = GS_QUIT;
+				}
 
 				globalDeltaTime = (f32)AEFrameRateControllerGetFrameTime();
 				globalAppTime += globalDeltaTime;
@@ -107,8 +109,9 @@ int WINAPI WinMain(_In_ HINSTANCE instanceH, _In_opt_ HINSTANCE prevInstanceH, _
 		
 		GameStateFree();
 
-		if(gGameStateNext != GS_RESTART)
+		if (gGameStateNext != GS_RESTART) {
 			GameStateUnload();
+		}
 
 		gGameStatePrev = gGameStateCurr;
 		gGameStateCurr = gGameStateNext;
