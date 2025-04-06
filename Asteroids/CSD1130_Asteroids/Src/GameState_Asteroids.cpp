@@ -1416,15 +1416,12 @@ void DrawGameObjects()
 void DrawGameOverScreen()
 {
 	SetUpRenderState(); // Ensure transparency is correct for text
-
-	char winText[64];
-	if (winningPlayerID != -1)
-		snprintf(winText, sizeof(winText), "Player %d Wins!", winningPlayerID);
-	else
-		snprintf(winText, sizeof(winText), "YOU WIN");
-
-
 	AEGfxPrint(fontId, "GAME OVER", -0.45f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+	char winText[64];
+	if (winningPlayerID != -1) {
+		snprintf(winText, sizeof(winText), "Player %d Wins!", winningPlayerID);
+	}
+	AEGfxPrint(fontId, winText, -0.35f, -0.60f, 2.0f, 0.0f, 1.0f, 0.0f, 1.0f);
 }
 
 /******************************************************************************/
