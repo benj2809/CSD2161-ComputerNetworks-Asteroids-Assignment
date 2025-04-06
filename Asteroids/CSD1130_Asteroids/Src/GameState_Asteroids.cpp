@@ -139,7 +139,7 @@ GameObjInst* gameObjInstCreate(unsigned long type, AEVec2* scale, AEVec2* pPos, 
  */
 void gameObjInstDestroy(GameObjInst* pInst)
 {
-	if (pInst->flag == 0) {
+	if (!pInst || pInst->flag == 0) {
 		return;
 	}
 
@@ -568,7 +568,7 @@ void GameStateAsteroidsUpdate(void)
 								// Removing pointer of destroyed bullet from bulletArray container.
 								bulletArray.erase(std::remove_if(bulletArray.begin(), bulletArray.end(),
 									[pInst](GameObjInst* bullet) {
-										return bullet = pInst;
+										return bullet == pInst;
 									}), bulletArray.end());
 
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision.

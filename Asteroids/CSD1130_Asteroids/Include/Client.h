@@ -199,6 +199,6 @@ private:
     static std::mutex playersMutex;        ///< Plauer data mutex
     static std::mutex bulletsMutex;        ///< Bullet data mutex
     static std::mutex asteroidsMutex;      ///< Asteroid data mutex
-    static size_t playerCount;             ///< Player count
+    static int playerCount;                ///< Player count
     static int playerID;                   ///< This client's player ID
 };

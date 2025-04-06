@@ -22,7 +22,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include "GameState_Asteroids.h"
 
 // Static member initialization
-size_t GameClient::playerCount;
+int GameClient::playerCount;
 int GameClient::playerID = -1; // Client's player ID (-1 means unassigned)
 std::mutex GameClient::playersMutex;
 std::mutex GameClient::bulletsMutex;
@@ -608,6 +608,9 @@ void GameClient::cleanup() noexcept {
         closesocket(clientSocket);
         clientSocket = INVALID_SOCKET; // Prevent double-close
     }
-    // Winsock cleanup is now automatic when winsock is destroyed
-    winsock.reset();  // Explicit cleanup (optional - will happen anyway when Client is destroyed)
+
+    if (winsockInitialized) {
+        WSACleanup();
+        winsockInitialized = false;  // Prevent multiple cleanup calls
+    }
 }

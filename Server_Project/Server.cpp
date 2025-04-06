@@ -48,11 +48,12 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <csignal>
 #include <unordered_map>
 #include <mutex>
 #include <vector>
-#include <sstream>
 #include <cmath>
 #include "taskqueue.h"
 #include "playerdata.h"
@@ -75,11 +76,7 @@ std::mutex asteroidsMutex;
 // Server Status Codes
 enum ServerStatus {
     STATUS_SUCCESS = 0,
-    STATUS_WINSOCK_FAILURE,
-    STATUS_ADDRESS_RESOLUTION_FAILURE,
-    STATUS_SOCKET_CREATION_FAILURE,
-    STATUS_BIND_FAILURE,
-    STATUS_LISTEN_FAILURE
+    STATUS_WINSOCK_FAILURE
 };
 
 /**
@@ -113,6 +110,11 @@ public:
      */
     void run();
 
+    /**
+    * @brief Request shutdown
+    */
+    void shutdown();
+
 private:
     // Network members
     SOCKET serverSocket = INVALID_SOCKET;                   // Main server socket
@@ -127,11 +129,18 @@ private:
     std::chrono::steady_clock::time_point lastBulletUpdateTime;
 
     // Game constants
-    const float MIN_ASTEROID_SCALE = 50.0f;
+    const float MIN_ASTEROID_SCALE = 30.0f;
     const float MAX_ASTEROID_SCALE = 100.0f;
-    const float ASTEROID_SPAWN_INTERVAL = 2.0f;
+    const int ASTEROID_SPAWN_BOUND_MAX_X = 1500;
+    const int ASTEROID_SPAWN_BOUND_MIN_X = 1000;
+    const float ASTEROID_SPAWN_BOUND_MAX_Y = 400.0f;
+    const float ASTEROID_SPAWN_BOUND_MIN_Y = -400.0f;
+    const int ASTEROID_SPAWN_HBOUND_MAX_Y = 1000.0f;
+    const int ASTEROID_SPAWN_HBOUND_MIN_Y = 500.0f;
+    const int ASTEROID_SPEED_MIN = 110;
+    const float ASTEROID_SPAWN_INTERVAL = 1.0f;
     const float ASTEROID_UPDATE_INTERVAL = 0.05f;
-    const float BULLET_LIFETIME_SECONDS = 2.5f;
+    const float BULLET_LIFETIME_SECONDS = 2.0f;
 
     // Player management
     std::unordered_map<std::string, int> ipToPlayerIdMap;   // Maps IPs to player IDs
@@ -159,8 +168,10 @@ private:
     void broadcastTimeUpdate();
 
     // Utility methods
+    bool isGameActive;
+    std::atomic<bool> shouldShutdown;  // Atomic flag for thread-safe shutdown checking
+    float timeUpdateAccumulator;
     void cleanupResources();
-    void onServerShutdown();
 };
 
 int main() {
@@ -191,6 +202,15 @@ bool GameServer::initialize(const std::string& port) {
     if (!resolveServerAddress(port)) return false;
     if (!createServerSocket()) return false;
     if (!bindServerSocket()) return false;
+
+    players.clear();  // Clear players map if needed
+    isGameActive = false;
+    shouldShutdown = false;
+
+    lastAsteroidCreationTime = std::chrono::steady_clock::now();
+    lastAsteroidUpdateTime = std::chrono::steady_clock::now();
+    lastBulletUpdateTime = std::chrono::steady_clock::now();
+    timeUpdateAccumulator = 0.0f;
 
     return true;
 }
@@ -226,36 +246,29 @@ void GameServer::broadcastTimeUpdate() {
  */
 void GameServer::run() {
     auto lastFrameTime = std::chrono::steady_clock::now();
-    bool isGameActive = false;
-    lastBulletUpdateTime = std::chrono::steady_clock::now();
 
     auto messageHandler = [this](UdpClientMessage message) {
         processClientMessage(message);
         return true;
-        };
+    };
 
     const auto shutdownHandler = [&]() {
         closesocket(serverSocket);
         return true;
-        };
+    };
 
     auto taskQueue = TaskQueue<UdpClientMessage, decltype(messageHandler), decltype(shutdownHandler)>{
         10, 20, messageHandler, shutdownHandler
     };
 
-    lastAsteroidCreationTime = std::chrono::steady_clock::now();
-    lastAsteroidUpdateTime = std::chrono::steady_clock::now();
-
-    float timeUpdateAccumulator = 0.0f;
-
-    while (true) {
+    while (!shouldShutdown) {
         auto currentTime = std::chrono::steady_clock::now();
         float deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
         lastFrameTime = currentTime;
 
         if (!isGameActive && players.size() >= 4) {
             isGameActive = true;
-            std::cout << "Game started with 4 players." << std::endl;
+            std::cout << "Game Start" << std::endl;
         }
 
         if (isGameActive) {
@@ -286,8 +299,7 @@ void GameServer::run() {
         updateBulletPositions();
         broadcastBulletData(serverSocket);
 
-        int bytesReceived = recvfrom(serverSocket, receiveBuffer, sizeof(receiveBuffer), 0,
-            (sockaddr*)&clientAddress, &clientAddressSize);
+        int bytesReceived = recvfrom(serverSocket, receiveBuffer, sizeof(receiveBuffer), 0, (sockaddr*)&clientAddress, &clientAddressSize);
 
         if (bytesReceived == SOCKET_ERROR) {
             continue;
@@ -301,6 +313,8 @@ void GameServer::run() {
         taskQueue.produce(clientMessage);
         sendPlayerStateToClients(serverSocket);
     }
+    shutdown();
+    shutdownHandler();
 }
 
 /**
@@ -320,23 +334,23 @@ void GameServer::spawnAsteroid() {
 
     switch (spawnSide) {
     case 0: // Top
-        positionX = (float)(rand() % 1600 - 800);
-        positionY = 400.0f;
+        positionX = (float)(rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X);
+        positionY = ASTEROID_SPAWN_BOUND_MAX_Y;
         break;
     case 1: // Right
-        positionX = 800.0f;
-        positionY = (float)(rand() % 1200 - 600);
+        positionX = ASTEROID_SPAWN_BOUND_MIN_X;
+        positionY = (float)(rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y);
         break;
     case 2: // Bottom
-        positionX = (float)(rand() % 1600 - 800);
-        positionY = -400.0f;
+        positionX = (float)(rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X);
+        positionY = ASTEROID_SPAWN_BOUND_MIN_Y;
         break;
     default: // Left
-        positionX = -800.0f;
-        positionY = (float)(rand() % 1200 - 600);
+        positionX = -ASTEROID_SPAWN_BOUND_MIN_X;
+        positionY = (float)(rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y);
     }
 
-    float speed = (float)(rand() % 90 + 90) / 1000.0f;
+    float speed = (float)(rand() % ASTEROID_SPEED_MIN + ASTEROID_SPEED_MIN) / 1000.0f;
     float directionX = 0.0f - positionX;
     float directionY = 0.0f - positionY;
 
@@ -788,20 +802,34 @@ void GameServer::broadcastPlayerScore(const PlayerData& player) {
 }
 
 /**
- * @brief Handles server shutdown procedures
- * @details Logs shutdown message (can be expanded for graceful shutdown)
- */
-void GameServer::onServerShutdown() {
-    std::cout << "Server shutting down..." << std::endl;
-}
-
-/**
  * @brief Cleans up server resources
  * @details Closes sockets and performs Winsock cleanup
  */
 void GameServer::cleanupResources() {
+
+    {
+        std::lock_guard<std::mutex> lock(asteroidsMutex);
+        asteroids.clear();
+    }
+    bullets.clear();
+    players.clear();
+
     if (serverSocket != INVALID_SOCKET) {
         closesocket(serverSocket);
+        serverSocket = INVALID_SOCKET;
     }
+
     WSACleanup();
+}
+
+void GameServer::shutdown() {
+    shouldShutdown = true;
+
+    // Notify all connected clients
+    std::string shutdownMsg = "SERVER_SHUTDOWN";
+    std::lock_guard<std::mutex> lock(clientsMutex);
+
+    for (const auto& [_, player] : players) {
+        sendto(serverSocket, shutdownMsg.c_str(), shutdownMsg.size(), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+    }
 }
