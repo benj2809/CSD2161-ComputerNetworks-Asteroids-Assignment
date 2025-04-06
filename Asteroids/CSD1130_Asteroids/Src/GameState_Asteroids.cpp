@@ -1504,7 +1504,13 @@ void DisplayScores(const std::unordered_map<int, PlayerData>& allPlayers, int lo
 	}
 }
 
-// Initialize to Zero matrix
+/**
+ * @brief Zeroes out the matrix
+ *
+ * This function zeroes out the matrix that is passed into it.
+ *
+ * @param mtx A matrix.
+ */
 void AEMtx33Zero(AEMtx33* mtx) {
 	mtx->m[0][0] = 0.0f; mtx->m[0][1] = 0.0f; mtx->m[0][2] = 0.0f;
 	mtx->m[1][0] = 0.0f; mtx->m[1][1] = 0.0f; mtx->m[1][2] = 0.0f;
