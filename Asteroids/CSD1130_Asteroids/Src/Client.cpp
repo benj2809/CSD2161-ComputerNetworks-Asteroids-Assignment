@@ -362,10 +362,6 @@ void GameClient::updateAsteroidsFromNetwork(const std::string& data) {
  */
 void GameClient::updateBulletsFromNetwork(const std::string& data) {
     ScopedBulletLock lock;
-    static int debugCounter = 0;
-    if (++debugCounter % 100 == 0) {
-        std::cout << "Received BULLETS message, length: " << data.length() << std::endl;
-    }
 
     std::unordered_set<std::string> updatedBulletIDs;
     int newBullets = 0, updatedBullets = 0;
@@ -427,13 +423,6 @@ void GameClient::updateBulletsFromNetwork(const std::string& data) {
         else {
             ++it;
         }
-    }
-
-    if (debugCounter % 100 == 0) {
-        std::cout << "Bullets: " << newBullets << " new, "
-            << updatedBullets << " updated, "
-            << removedBullets << " removed, "
-            << "Total: " << bullets.size() << std::endl;
     }
 }
 

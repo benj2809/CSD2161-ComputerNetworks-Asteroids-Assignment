@@ -498,8 +498,9 @@ void GameStateAsteroidsUpdate(void)
 		GameObjInst* pInst = sGameObjInstList + i;
 
 		// skip non-active object
-		if ((pInst->flag & FLAG_ACTIVE) == 0)
+		if ((pInst->flag & FLAG_ACTIVE) == 0) {
 			continue;
+		}
 
 		pInst->posPrev.x = pInst->posCurr.x;
 		pInst->posPrev.y = pInst->posCurr.y;
@@ -516,20 +517,19 @@ void GameStateAsteroidsUpdate(void)
 	for (int i = 0; i < GAME_OBJ_INST_NUM_MAX; ++i) { // For loop to iterate all object instances and creating a bounding box for each of them, this bounding box will be used for collision detection.
 		GameObjInst* pInst = sGameObjInstList + i;
 
-		pInst->boundingBox.min.x = -(BOUNDING_RECT_SIZE / 2.f) * pInst->scale.x + pInst->posPrev.x;
-		pInst->boundingBox.min.y = -(BOUNDING_RECT_SIZE / 2.f) * pInst->scale.y + pInst->posPrev.y;
-		pInst->boundingBox.max.x = (BOUNDING_RECT_SIZE / 2.f) * pInst->scale.x + pInst->posPrev.x;
-		pInst->boundingBox.max.y = (BOUNDING_RECT_SIZE / 2.f) * pInst->scale.y + pInst->posPrev.y;
+		pInst->boundingBox.min.x = -(BOUNDING_RECT_SIZE / 2.0f) * pInst->scale.x + pInst->posPrev.x;
+		pInst->boundingBox.min.y = -(BOUNDING_RECT_SIZE / 2.0f) * pInst->scale.y + pInst->posPrev.y;
+		pInst->boundingBox.max.x = (BOUNDING_RECT_SIZE / 2.0f) * pInst->scale.x + pInst->posPrev.x;
+		pInst->boundingBox.max.y = (BOUNDING_RECT_SIZE / 2.0f) * pInst->scale.y + pInst->posPrev.y;
 
-		pInst->posCurr.x += pInst->velCurr.x * (float)AEFrameRateControllerGetFrameTime(); // Updating position of the object instance.
-		pInst->posCurr.y += pInst->velCurr.y * (float)AEFrameRateControllerGetFrameTime();
+		pInst->posCurr.x = pInst->velCurr.x * globalDeltaTime + pInst->posCurr.x;
+		pInst->posCurr.y = pInst->velCurr.y * globalDeltaTime + pInst->posCurr.y;
 	}
 
 	// ======================================================================
 	// check for dynamic-static collisions (one case only: Ship vs Wall)
 	// [DO NOT UPDATE THIS PARAGRAPH'S CODE]
 	// ======================================================================
-	// Helper_Wall_Collision(); // More information can be found below, at the definition of the function. TLDR; calls function CollisionIntersection_RectRect, definition found in Collision.cpp.
 
 	//======================================================================
 	//check for dynamic-dynamic collisions [AA-BB] 
@@ -601,34 +601,32 @@ void GameStateAsteroidsUpdate(void)
 	{
 		GameObjInst* pInst = sGameObjInstList + i;
 
-		// Skip non-active game objects (objects that are inactive will be ignored in the logic)
-		if ((pInst->flag & FLAG_ACTIVE) == 0)
+		// Skip non-active game object
+		if ((pInst->flag & FLAG_ACTIVE) == 0) {
 			continue;
+		}
 
 		// Handle ship objects: Wrap the ship around the screen when it goes off the edges
 		if (pInst->pObject->type == TYPE_SHIP) {
-			// Wrap the x-coordinate of the ship to the opposite end of the screen, if it goes out of bounds
+			// Wrap ship coordinates to opposite end
 			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
-
-			// Wrap the y-coordinate of the ship to the opposite end of the screen, if it goes out of bounds
 			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
 		}
 
 		// Handle asteroid objects: Wrap the asteroids around the screen when they go off the edges
 		if (pInst->pObject->type == TYPE_ASTEROID) {
-			// Wrap the x-coordinate of the asteroid to the opposite end of the screen, if it goes out of bounds
+			// Wrap asteroid coordinates to opposite end
 			pInst->posCurr.x = AEWrap(pInst->posCurr.x, AEGfxGetWinMinX() - ASTEROID_MAX_SCALE_X, AEGfxGetWinMaxX() + ASTEROID_MAX_SCALE_X);
-
-			// Wrap the y-coordinate of the asteroid to the opposite end of the screen, if it goes out of bounds
 			pInst->posCurr.y = AEWrap(pInst->posCurr.y, AEGfxGetWinMinY() - ASTEROID_MAX_SCALE_Y, AEGfxGetWinMaxY() + ASTEROID_MAX_SCALE_Y);
 		}
 
 		// Handle bullet objects: Remove bullets that go out of bounds to free up resources
 		if (pInst->pObject->type == TYPE_BULLET) {
 			// Check if the bullet has moved out of the screen's horizontal or vertical bounds
-			if (pInst->posCurr.x > (AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.x < -(AEGfxGetWindowWidth() / 2.f)
-				|| pInst->posCurr.y >(AEGfxGetWindowHeight() / 2.f) || pInst->posCurr.y < -(AEGfxGetWindowHeight() / 2.f))
-				gameObjInstDestroy(pInst); // Destroy the bullet if it's out of bounds
+			if (pInst->posCurr.x > (AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.x < -(AEGfxGetWindowWidth() / 2.f) || pInst->posCurr.y >(AEGfxGetWindowHeight() / 2.f) || pInst->posCurr.y < -(AEGfxGetWindowHeight() / 2.f)) {
+				// Destroy out of bound bullets
+				gameObjInstDestroy(pInst);
+			}
 		}
 	}
 
@@ -636,27 +634,29 @@ void GameStateAsteroidsUpdate(void)
 	// calculate the matrix for all objects
 	// =====================================================================
 
+	AEMtx33 translate{}, rotation{}, scale{}; // Vectors for matrices.
 	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
 	{
 		GameObjInst* pInst = sGameObjInstList + i; // Iterate through each instance.
-		AEMtx33		 trans{}, rot{}, scale{}; // Vectors for matrices.
 
-		// skip non-active object
-		if ((pInst->flag & FLAG_ACTIVE) == 0) // Skip if instance is not active.
+		// Skip inactive object
+		if ((pInst->flag & FLAG_ACTIVE) == 0) {
 			continue;
+		}
 
-		// Compute the scaling matrix
-		AEMtx33Scale(&scale, pInst->scale.x, pInst->scale.y); // The scaling matrix consists of the instances scale x/y.
+		// Reset the matrices for each object
+		AEMtx33Zero(&translate);
+		AEMtx33Zero(&rotation);
+		AEMtx33Zero(&scale);
 
-		// Compute the rotation matrix 
-		AEMtx33Rot(&rot, pInst->dirCurr); // The rotation matrix consists of the instances current directon.
+		// Scale, Rotate, Translate matrix
+		AEMtx33Scale(&scale, pInst->scale.x, pInst->scale.y);
+		AEMtx33Rot(&rotation, pInst->dirCurr);
+		AEMtx33Trans(&translate, pInst->posCurr.x, pInst->posCurr.y);
 
-		// Compute the translation matrix
-		AEMtx33Trans(&trans, pInst->posCurr.x, pInst->posCurr.y); // The translation matrix consists of the instances current position x/y.
-
-		// Concatenate the 3 matrix in the correct order in the object instance's "transform" matrix, the correct order being Scale * Rotate * Translate = Transform.
-		AEMtx33Concat(&pInst->transform, &rot, &scale);
-		AEMtx33Concat(&pInst->transform, &trans, &pInst->transform);
+		// Concatenate in Scale * Rotate * Translate = Transform order.
+		AEMtx33Concat(&pInst->transform, &rotation, &scale);
+		AEMtx33Concat(&pInst->transform, &translate, &pInst->transform);
 	}
 
 	for (const auto& pair : players) {
@@ -669,70 +669,54 @@ void GameStateAsteroidsUpdate(void)
 		break;
 	}
 
-	// Update bullet positions
-	for (auto it = bulletArray.begin(); it != bulletArray.end();) {
-		GameObjInst* bullet = *it;
-		if (!bullet || !(bullet->flag & FLAG_ACTIVE)) {
-			it = bulletArray.erase(it);
-			continue;
-		}
+	// Bullet updates
+	bulletArray.erase(std::remove_if(bulletArray.begin(), bulletArray.end(), [](GameObjInst* bullet)
+	{
+			if (!bullet || !(bullet->flag & FLAG_ACTIVE)) {
+				return true;
+			}
 
-		// Update bullet position based on velocity
-		bullet->posCurr.x += bullet->velCurr.x * globalDeltaTime;
-		bullet->posCurr.y += bullet->velCurr.y * globalDeltaTime;
+			bullet->posCurr.x += bullet->velCurr.x * globalDeltaTime;
+			bullet->posCurr.y += bullet->velCurr.y * globalDeltaTime;
 
-		// Check if bullet is out of bounds
-		if (bullet->posCurr.x < AEGfxGetWinMinX() - BULLET_SCALE_X ||
-			bullet->posCurr.x > AEGfxGetWinMaxX() + BULLET_SCALE_X ||
-			bullet->posCurr.y < AEGfxGetWinMinY() - BULLET_SCALE_Y ||
-			bullet->posCurr.y > AEGfxGetWinMaxY() + BULLET_SCALE_Y) {
+			bool outOfBounds = bullet->posCurr.x < AEGfxGetWinMinX() - BULLET_SCALE_X || bullet->posCurr.x > AEGfxGetWinMaxX() + BULLET_SCALE_X || bullet->posCurr.y < AEGfxGetWinMinY() - BULLET_SCALE_Y || bullet->posCurr.y > AEGfxGetWinMaxY() + BULLET_SCALE_Y;
 
-			gameObjInstDestroy(bullet);
-			it = bulletArray.erase(it);
-		}
-		else {
-			// Update bullet transformation
-			AEMtx33 scale, rot, trans;
-			AEMtx33Scale(&scale, bullet->scale.x, bullet->scale.y);
-			AEMtx33Rot(&rot, bullet->dirCurr);
-			AEMtx33Trans(&trans, bullet->posCurr.x, bullet->posCurr.y);
+			if (outOfBounds)
+			{
+				gameObjInstDestroy(bullet);
+				return true;
+			}
 
-			AEMtx33Concat(&bullet->transform, &rot, &scale);
-			AEMtx33Concat(&bullet->transform, &trans, &bullet->transform);
+			AEMtx33 scaleMat, rotMat, transMat;
+			AEMtx33Scale(&scaleMat, bullet->scale.x, bullet->scale.y);
+			AEMtx33Rot(&rotMat, bullet->dirCurr);
+			AEMtx33Trans(&transMat, bullet->posCurr.x, bullet->posCurr.y);
 
-			++it;
-		}
-	}
+			AEMtx33Concat(&bullet->transform, &rotMat, &scaleMat);
+			AEMtx33Concat(&bullet->transform, &transMat, &bullet->transform);
+
+			return false;
+	}), bulletArray.end());
 
 	{
-		// Update network bullets
 		GameClient::ScopedBulletLock lock;
 		for (auto& pair : bullets) {
-			// Update bullet position
 			pair.second.X += pair.second.velocityX * globalDeltaTime;
 			pair.second.Y += pair.second.velocityY * globalDeltaTime;
 		}
 	}
 
-	// Update asteroids interpolation
 	updateAsteroidInterpolation();
-
-	// Check collisions between bullets and asteroids
 	checkBulletAsteroidCollisions();
-
 	synchronizeShips(players);
 
-	// Make sure our local player's ship is properly tracked
-	for (const auto& pair : players) {
-		if (pair.second.playerID == GameClient::getPlayerID()) {
-			// Update our local position reference but keep using spShip for local control
-			finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
-			playerRotate = ship->dirCurr;
-
-			// Get the current score from the server data
-			Playerscore = pair.second.score;
-			break;
-		}
+	// Tracking local player ship
+	auto it = players.find(GameClient::getPlayerID());
+	if (it != players.end())
+	{
+		finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
+		playerRotate = ship->dirCurr;
+		Playerscore = it->second.score;
 	}
 }
 
@@ -1306,4 +1290,11 @@ void displayScores() {
 
 		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 	}
+}
+
+// Initialize to Zero matrix
+void AEMtx33Zero(AEMtx33* mtx) {
+	mtx->m[0][0] = 0.0f; mtx->m[0][1] = 0.0f; mtx->m[0][2] = 0.0f;
+	mtx->m[1][0] = 0.0f; mtx->m[1][1] = 0.0f; mtx->m[1][2] = 0.0f;
+	mtx->m[2][0] = 0.0f; mtx->m[2][1] = 0.0f; mtx->m[2][2] = 0.0f;
 }

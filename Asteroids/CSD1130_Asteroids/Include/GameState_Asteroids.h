@@ -56,4 +56,7 @@ void synchronizeShips(std::unordered_map<int, PlayerData>& pData);
 void renderNames(std::unordered_map<int, PlayerData>& pData);
 void displayScores();
 
+// Others
+void AEMtx33Zero(AEMtx33* mtx);
+
 #endif
