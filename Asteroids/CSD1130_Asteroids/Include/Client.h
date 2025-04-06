@@ -65,22 +65,21 @@ struct UdpClientData {
  * @brief Player data structure
  */
 struct PlayerData {
-    int playerID;           ///< Unique player identifier
-    float X, Y, rotation;       ///< Position and rotation
-    std::string clientIP;       ///< Client IP address
-    int score;             ///< Current game score
-    static float gameTimer; ///< Shared game timer
+    int playerID;              ///< Unique player identifier
+    float X, Y, rotation;      ///< Position and rotation
+    std::string clientIP;      ///< Client IP address
+    int score;                 ///< Current game score
 };
 
 /**
  * @brief Bullet data structure
  */
 struct BulletData {
-    std::string bulletID;      ///< Unique bullet identifier
-    float X, Y;                     ///< Current position
-    float velocityX, velocityY;         ///< Velocity components
-    float direction;                ///< Movement direction
-    bool fromLocalPlayer;     ///< Flag for locally created bullets
+    std::string bulletID;       ///< Unique bullet identifier
+    float X, Y;                 ///< Current position
+    float velocityX, velocityY; ///< Velocity components
+    float direction;            ///< Movement direction
+    bool fromLocalPlayer;       ///< Flag for locally created bullets
 };
 
 /**
@@ -102,7 +101,6 @@ struct AsteroidData {
 extern std::unordered_map<int, PlayerData> players;
 extern std::unordered_map<std::string, BulletData> bullets;
 extern std::unordered_map<std::string, AsteroidData> asteroids;
-extern std::mutex asteroidsMutex;
 
 /* ======================= CLIENT CLASS ======================= */
 
@@ -113,10 +111,10 @@ extern std::mutex asteroidsMutex;
  * manages player data synchronization, and provides thread-safe
  * access to game state.
  */
-class Client {
+class GameClient {
 public:
-    Client() = default;
-    ~Client() { cleanup(); }
+    GameClient() = default;
+    ~GameClient() { cleanup(); }
 
     /* ========== PUBLIC INTERFACE ========== */
 
@@ -137,8 +135,18 @@ public:
     void sendScoreUpdateEvent(const std::string& pid, int score);
 
     // Thread synchronization
-    static void lockBullets() { bulletsMutex.lock(); }
-    static void unlockBullets() { bulletsMutex.unlock(); }
+    struct ScopedPlayerLock {
+        ScopedPlayerLock() { playersMutex.lock(); }
+        ~ScopedPlayerLock() { playersMutex.unlock(); }
+    };
+    struct ScopedBulletLock {
+        ScopedBulletLock() { bulletsMutex.lock(); }
+        ~ScopedBulletLock() { bulletsMutex.unlock(); }
+    };
+    struct ScopedAsteroidLock {
+        ScopedAsteroidLock() { asteroidsMutex.lock(); }
+        ~ScopedAsteroidLock() { asteroidsMutex.unlock(); }
+    };
 
     // Accessors
     static void displayPlayerScores();
@@ -188,8 +196,9 @@ private:
     sockaddr_in serverSockAddr;            ///< Server address for UDP communication
 
     // Static members
-    static std::mutex playersMutex;        ///< General-purpose mutex
+    static std::mutex playersMutex;        ///< Plauer data mutex
     static std::mutex bulletsMutex;        ///< Bullet data mutex
+    static std::mutex asteroidsMutex;      ///< Asteroid data mutex
     static size_t playerCount;             ///< Player count
     static int playerID;                   ///< This client's player ID
 };

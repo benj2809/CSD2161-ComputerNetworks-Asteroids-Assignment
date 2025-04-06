@@ -22,15 +22,15 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 #include "GameState_Asteroids.h"
 
 // Static member initialization
-size_t Client::playerCount;
-int Client::playerID = -1; // Client's player ID (-1 means unassigned)
-std::mutex Client::playersMutex;
-std::mutex Client::bulletsMutex;
+size_t GameClient::playerCount;
+int GameClient::playerID = -1; // Client's player ID (-1 means unassigned)
+std::mutex GameClient::playersMutex;
+std::mutex GameClient::bulletsMutex;
+std::mutex GameClient::asteroidsMutex;
 
-// Shared data structures
+// Multiplayer objects
 std::unordered_map<int, PlayerData> players;
 std::unordered_map<std::string, AsteroidData> asteroids;
-std::mutex asteroidsMutex;
 std::unordered_map<std::string, BulletData> bullets;
 
 /* ======================= INITIALIZATION METHODS ======================= */
@@ -41,7 +41,7 @@ std::unordered_map<std::string, BulletData> bullets;
  * @param serverPort The port number of the server
  * @return true if initialization succeeds, false otherwise
  */
-bool Client::initialize(const std::string& serverIPAddress, uint16_t serverPortNumber) {
+bool GameClient::initialize(const std::string& serverIPAddress, uint16_t serverPortNumber) {
     this->serverIP = serverIPAddress;
     this->serverPort = serverPortNumber;
     playerCount = 0;
@@ -57,7 +57,7 @@ bool Client::initialize(const std::string& serverIPAddress, uint16_t serverPortN
  * @brief Sets up the Winsock library
  * @return true if Winsock initializes successfully
  */
-bool Client::setupWinsock() {
+bool GameClient::setupWinsock() {
     try {
         winsock = std::make_unique<WinsockManager>();
         return true;
@@ -74,7 +74,7 @@ bool Client::setupWinsock() {
  * @param serverPort The server port number
  * @return true if address resolution succeeds
  */
-bool Client::resolveAddress(const std::string& serverIPAddress, uint16_t serverPortNumber) {
+bool GameClient::resolveAddress(const std::string& serverIPAddress, uint16_t serverPortNumber) {
     return !serverIPAddress.empty() && serverPortNumber != 0;
 }
 
@@ -82,7 +82,7 @@ bool Client::resolveAddress(const std::string& serverIPAddress, uint16_t serverP
  * @brief Creates a UDP socket for communication
  * @return true if socket creation succeeds
  */
-bool Client::createSocket() {
+bool GameClient::createSocket() {
     clientSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "Socket creation failed." << std::endl;
@@ -96,7 +96,7 @@ bool Client::createSocket() {
  * @brief Connects the client to the server (UDP is connectionless)
  * @return true if server address information is retrieved successfully
  */
-bool Client::connectToServer() {
+bool GameClient::connectToServer() {
     addrinfo hints{};
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
@@ -128,17 +128,17 @@ bool Client::connectToServer() {
  * @brief Runs the client in interactive mode
  * Starts network thread and sends initial message
  */
-void Client::run() {
+void GameClient::run() {
     sendData();
-    std::thread(&Client::receiveNetworkMessages, this).detach();
+    std::thread(&GameClient::receiveNetworkMessages, this).detach();
 }
 
 /**
  * @brief Runs the client in script mode
  * @param scriptDirectory Path to the script file containing commands
  */
-void Client::runScript() {
-    std::thread(&Client::receiveNetworkMessages, this).detach();
+void GameClient::runScript() {
+    std::thread(&GameClient::receiveNetworkMessages, this).detach();
     sendData();
 }
 
@@ -148,7 +148,7 @@ void Client::runScript() {
  * @param IP Output parameter for server IP
  * @param port Output parameter for server port
  */
-void Client::getServerInfo(const std::string& scriptDirectory, std::string& IP, std::string& port) {
+void GameClient::getServerInfo(const std::string& scriptDirectory, std::string& IP, std::string& port) {
     std::ifstream file(scriptDirectory);
     if (!file) {
         std::cerr << "Error: " << scriptDirectory << " could not be opened." << std::endl;
@@ -166,7 +166,7 @@ void Client::getServerInfo(const std::string& scriptDirectory, std::string& IP, 
  * @brief Sends player data to the server via UDP
  * Includes position, rotation, and score
  */
-void Client::sendData() {
+void GameClient::sendData() {
 
     // Get player data
     AEVec2 position = fetchPlayerPosition();
@@ -208,7 +208,7 @@ void Client::sendData() {
  * @brief Handles incoming network messages in a separate thread
  * Processes player updates, asteroid data, bullet data, and score updates
  */
-void Client::receiveNetworkMessages() {
+void GameClient::receiveNetworkMessages() {
     sockaddr_in serverAddr{};
     int addrSize = sizeof(serverAddr);
     char receiveBuffer[1024];
@@ -262,8 +262,8 @@ void Client::receiveNetworkMessages() {
  * @brief Processes asteroid data updates from server
  * @param data The received asteroid data string
  */
-void Client::updateAsteroidsFromNetwork(const std::string& data) {
-    std::lock_guard<std::mutex> lock(asteroidsMutex);
+void GameClient::updateAsteroidsFromNetwork(const std::string& data) {
+    ScopedAsteroidLock lock;
     auto currentTime = std::chrono::steady_clock::now();
     std::vector<std::string> updatedIDstrings;
 
@@ -360,8 +360,8 @@ void Client::updateAsteroidsFromNetwork(const std::string& data) {
  * @brief Processes bullet data updates from server
  * @param data The received bullet data string
  */
-void Client::updateBulletsFromNetwork(const std::string& data) {
-    std::lock_guard<std::mutex> lock(bulletsMutex);
+void GameClient::updateBulletsFromNetwork(const std::string& data) {
+    ScopedBulletLock lock;
     static int debugCounter = 0;
     if (++debugCounter % 100 == 0) {
         std::cout << "Received BULLETS message, length: " << data.length() << std::endl;
@@ -441,7 +441,8 @@ void Client::updateBulletsFromNetwork(const std::string& data) {
  * @brief Processes score updates from server
  * @param data The received score data string
  */
-void Client::updateScoresFromNetwork(const std::string& data) {
+void GameClient::updateScoresFromNetwork(const std::string& data) {
+    ScopedPlayerLock lock;
     size_t pos = data.find('|');
     if (pos != std::string::npos) {
         std::string scoreData = data.substr(pos + 1);
@@ -457,7 +458,8 @@ void Client::updateScoresFromNetwork(const std::string& data) {
  * @brief Processes general player data updates
  * @param data The received player data string
  */
-void Client::updatePlayersFromNetwork(const std::string& data) {
+void GameClient::updatePlayersFromNetwork(const std::string& data) {
+    ScopedPlayerLock lock;
     std::istringstream str(data);
     PlayerData p;
     while (str >> p.playerID >> p.X >> p.Y >> p.rotation >> p.score >> p.clientIP) {
@@ -472,7 +474,7 @@ void Client::updatePlayersFromNetwork(const std::string& data) {
  * @brief Reports asteroid destruction to the server
  * @param asteroidID The ID of the destroyed asteroid
  */
-void Client::sendAsteroidDestructionEvent(const std::string& asteroidID) {
+void GameClient::sendAsteroidDestructionEvent(const std::string& asteroidID) {
     std::string message = "DESTROY_ASTEROID|" + asteroidID;
     sendRawMessage(message);
 }
@@ -482,7 +484,7 @@ void Client::sendAsteroidDestructionEvent(const std::string& asteroidID) {
  * @param playerID The ID of the player
  * @param score The new score value
  */
-void Client::sendScoreUpdateEvent(const std::string& pid, int score) {
+void GameClient::sendScoreUpdateEvent(const std::string& pid, int score) {
     std::string message = "UPDATE_SCORE|" + pid + " " + std::to_string(score);
     sendRawMessage(message);
 }
@@ -494,7 +496,7 @@ void Client::sendScoreUpdateEvent(const std::string& pid, int score) {
  * @param dir The bullet's direction
  * @param bulletID Optional bullet identifier
  */
-void Client::sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
+void GameClient::sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float dir, const std::string& bulletID) {
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "ERROR: Cannot send bullet creation - socket is invalid!" << std::endl;
         return;
@@ -518,7 +520,7 @@ void Client::sendBulletCreationEvent(const AEVec2& pos, const AEVec2& vel, float
  * @brief Helper method to send messages to server
  * @param message The message to send
  */
-void Client::sendRawMessage(const std::string& message) {
+void GameClient::sendRawMessage(const std::string& message) {
     addrinfo hints{};
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -546,8 +548,8 @@ void Client::sendRawMessage(const std::string& message) {
  *          Highlights the current player with "[YOU]" marker.
  * @note Thread-safe - locks playersMutex during operation
  */
-void Client::displayPlayerScores() {
-    std::lock_guard<std::mutex> lock(playersMutex);
+void GameClient::displayPlayerScores() {
+    ScopedPlayerLock lock;
 
     const int ID_WIDTH = 10;
     const int SCORE_WIDTH = 10;
@@ -599,36 +601,9 @@ void Client::displayPlayerScores() {
 }
 
 /**
- * @brief Updates asteroid positions using interpolation for smooth movement
- */
-void updateAsteroidInterpolation() {
-    constexpr float INTERPOLATION_DURATION = 0.1f; // 100ms window
-
-    std::lock_guard<std::mutex> lock(asteroidsMutex);
-    auto currentTime = std::chrono::steady_clock::now();
-
-    for (auto& pair : asteroids) {
-        auto& asteroid = pair.second;
-        if (!asteroid.isActive) continue;
-
-        float deltaTime = std::chrono::duration<float>(currentTime - asteroid.lastUpdateTime).count();
-
-        if (deltaTime < INTERPOLATION_DURATION) {
-            float interpolationFactor = deltaTime / INTERPOLATION_DURATION;
-            asteroid.currentX += (asteroid.targetX - asteroid.currentX) * interpolationFactor;
-            asteroid.currentY += (asteroid.targetY - asteroid.currentY) * interpolationFactor;
-        }
-        else {
-            asteroid.currentX = asteroid.targetX;
-            asteroid.currentY = asteroid.targetY;
-        }
-    }
-}
-
-/**
  * @brief Cleans up network resources
  */
-void Client::cleanup() noexcept {
+void GameClient::cleanup() noexcept {
     if (clientSocket != INVALID_SOCKET) {
         closesocket(clientSocket);
         clientSocket = INVALID_SOCKET; // Prevent double-close

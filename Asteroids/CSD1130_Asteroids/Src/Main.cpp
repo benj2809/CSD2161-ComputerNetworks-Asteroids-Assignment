@@ -27,7 +27,7 @@ prior written consent of DigiPen Institute of Technology is prohibited.
 float	 globalDeltaTime;
 double	 globalAppTime;
 s8       fontId;
-Client   globalClient;  // Global client object
+GameClient   globalClient;  // Global client object
 
 
 /******************************************************************************/

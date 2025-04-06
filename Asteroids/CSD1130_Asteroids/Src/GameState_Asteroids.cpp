@@ -30,26 +30,20 @@ const float SHIP_SCALE_X = 16.0f;
 const float SHIP_SCALE_Y = 16.0f;
 const float BULLET_SCALE_X = 20.0f;
 const float BULLET_SCALE_Y = 3.0f;
-const float ASTEROID_MIN_SCALE_X = 10.0f;
 const float ASTEROID_MAX_SCALE_X = 60.0f;
-const float ASTEROID_MIN_SCALE_Y = 10.0f;
 const float ASTEROID_MAX_SCALE_Y = 60.0f;
-const float WALL_SCALE_X = 64.0f;
-const float WALL_SCALE_Y = 164.0f;
 
 // Movement parameters
 const float SHIP_ACCEL_FORWARD = 100.0f;
 const float SHIP_ACCEL_BACKWARD = 100.0f;
 const float SHIP_ROT_SPEED = (2.0f * PI);
-const float BULLET_SPEED = 400.0f;
+const float BULLET_SPEED = 500.0f;
 const float BOUNDING_RECT_SIZE = 1.0f;
 
 // Game state
 static bool onValueChange{ true };
-float PlayerData::gameTimer = 60.0f;
 bool gameOver = false;
 bool winnerAnnounced = false;
-static bool spaceDebounce = false;
 int playerCount = 1;
 
 enum TYPE {
@@ -78,7 +72,7 @@ struct GameObjInst {
 	AEMtx33 transform;
 };
 
-// Global game objects
+// Static member initialization
 static GameObj sGameObjList[GAME_OBJ_NUM_MAX];
 static unsigned long sGameObjNum;
 static GameObjInst sGameObjInstList[GAME_OBJ_INST_NUM_MAX];
@@ -90,11 +84,10 @@ static unsigned long shipScore;
 
 // Multiplayer objects
 std::unordered_map<int, GameObjInst*> shipMap;
-std::vector<GameObjInst*> pBullets;
-extern std::mutex asteroidsMutex;
+std::vector<GameObjInst*> bulletArray;
 extern std::unordered_map<std::string, AsteroidData> asteroids;
 extern std::unordered_map<std::string, BulletData> bullets;
-extern Client globalClient;
+extern GameClient globalClient;
 
 // Flags
 const unsigned long FLAG_ACTIVE = 0x00000001;
@@ -312,12 +305,12 @@ void GameStateAsteroidsInit(void)
 	}
 	shipMap.clear();
 
-	for (auto it = pBullets.begin(); it != pBullets.end(); ++it) {
+	for (auto it = bulletArray.begin(); it != bulletArray.end(); ++it) {
 		if (*it) {
 			gameObjInstDestroy(*it);
 		}
 	}
-	pBullets.clear();
+	bulletArray.clear();
 
 	// Create the main ship instance.
 	AEVec2 scale;
@@ -374,7 +367,7 @@ void GameStateAsteroidsUpdate(void)
 
 	// Display scores only when they've changed
 	if (scoresChanged) {
-		Client::displayPlayerScores();
+		GameClient::displayPlayerScores();
 	}
 
 	// Clean up scores for players who are no longer present
@@ -386,9 +379,6 @@ void GameStateAsteroidsUpdate(void)
 			++it;
 		}
 	}
-
-	// Calculate delta time
-	float deltaTime = (float)AEFrameRateControllerGetFrameTime();
 
 	// If the game is over, you might want to return early to skip further game logic
 	if (gameOver && !winnerAnnounced) {
@@ -462,9 +452,7 @@ void GameStateAsteroidsUpdate(void)
 		}
 
 		// --- Shooting ---
-		if (AEInputCheckTriggered(AEVK_SPACE) && !spaceDebounce) {
-			spaceDebounce = true;
-
+		if (AEInputCheckTriggered(AEVK_SPACE)) {
 			AEVec2 bulletDir;
 			AEVec2Set(&bulletDir, cosf(ship->dirCurr), sinf(ship->dirCurr));
 
@@ -481,11 +469,9 @@ void GameStateAsteroidsUpdate(void)
 			GameObjInst* newBullet = gameObjInstCreate(TYPE_BULLET, &bulletScale, &bulletSpawnPos, &bulletVelocity, ship->dirCurr);
 
 			if (newBullet) {
-				std::string uniqueBulletID = std::to_string(Client::getPlayerID()) + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+				std::string uniqueBulletID = std::to_string(GameClient::getPlayerID()) + "_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 
-				pBullets.push_back(newBullet);
-
-				Client::lockBullets();
+				GameClient::ScopedBulletLock lock;
 				BulletData bulletInfo;
 				bulletInfo.bulletID = uniqueBulletID;
 				bulletInfo.X = bulletSpawnPos.x;
@@ -495,13 +481,10 @@ void GameStateAsteroidsUpdate(void)
 				bulletInfo.direction = ship->dirCurr;
 				bulletInfo.fromLocalPlayer = true;
 				bullets[uniqueBulletID] = bulletInfo;
-				Client::unlockBullets();
+				bulletArray.push_back(newBullet);
 
 				globalClient.sendBulletCreationEvent(bulletSpawnPos, bulletVelocity, ship->dirCurr, uniqueBulletID);
 			}
-		}
-		else if (!AEInputCheckCurr(AEVK_SPACE)) {
-			spaceDebounce = false;
 		}
 	}
 
@@ -582,11 +565,11 @@ void GameStateAsteroidsUpdate(void)
 								NewpInst->boundingBox, NewpInst->velCurr,
 								tFirst)) { // ASTEROID - BULLET and BULLET - ASTEROID collision checks are account for to prevent false collisions.
 
-								// Removing pointer of destroyed bullet from pBullets container.
-								pBullets.erase(std::remove_if(pBullets.begin(), pBullets.end(),
+								// Removing pointer of destroyed bullet from bulletArray container.
+								bulletArray.erase(std::remove_if(bulletArray.begin(), bulletArray.end(),
 									[pInst](GameObjInst* bullet) {
 										return bullet = pInst;
-									}), pBullets.end());
+									}), bulletArray.end());
 
 								gameObjInstDestroy(pInst); // Destroy the ASTEROID if there is collision.
 								gameObjInstDestroy(NewpInst); // Likewise destroy the bullet.
@@ -678,7 +661,7 @@ void GameStateAsteroidsUpdate(void)
 
 	for (const auto& pair : players) {
 
-		if (pair.second.playerID != Client::getPlayerID()) {
+		if (pair.second.playerID != GameClient::getPlayerID()) {
 			continue;
 		}
 		finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
@@ -687,10 +670,10 @@ void GameStateAsteroidsUpdate(void)
 	}
 
 	// Update bullet positions
-	for (auto it = pBullets.begin(); it != pBullets.end();) {
+	for (auto it = bulletArray.begin(); it != bulletArray.end();) {
 		GameObjInst* bullet = *it;
 		if (!bullet || !(bullet->flag & FLAG_ACTIVE)) {
-			it = pBullets.erase(it);
+			it = bulletArray.erase(it);
 			continue;
 		}
 
@@ -705,7 +688,7 @@ void GameStateAsteroidsUpdate(void)
 			bullet->posCurr.y > AEGfxGetWinMaxY() + BULLET_SCALE_Y) {
 
 			gameObjInstDestroy(bullet);
-			it = pBullets.erase(it);
+			it = bulletArray.erase(it);
 		}
 		else {
 			// Update bullet transformation
@@ -721,14 +704,15 @@ void GameStateAsteroidsUpdate(void)
 		}
 	}
 
-	// Update network bullets
-	Client::lockBullets();
-	for (auto& pair : bullets) {
-		// Update bullet position
-		pair.second.X += pair.second.velocityX * globalDeltaTime;
-		pair.second.Y += pair.second.velocityY * globalDeltaTime;
+	{
+		// Update network bullets
+		GameClient::ScopedBulletLock lock;
+		for (auto& pair : bullets) {
+			// Update bullet position
+			pair.second.X += pair.second.velocityX * globalDeltaTime;
+			pair.second.Y += pair.second.velocityY * globalDeltaTime;
+		}
 	}
-	Client::unlockBullets();
 
 	// Update asteroids interpolation
 	updateAsteroidInterpolation();
@@ -740,7 +724,7 @@ void GameStateAsteroidsUpdate(void)
 
 	// Make sure our local player's ship is properly tracked
 	for (const auto& pair : players) {
-		if (pair.second.playerID == Client::getPlayerID()) {
+		if (pair.second.playerID == GameClient::getPlayerID()) {
 			// Update our local position reference but keep using spShip for local control
 			finalPlayerPosition = { ship->posCurr.x, ship->posCurr.y };
 			playerRotate = ship->dirCurr;
@@ -820,7 +804,6 @@ void GameStateAsteroidsDraw(void)
 	// Display scores for each player
 	for (auto p : players)
 	{
-		int id = p.first;
 		displayScores();
 	}
 }
@@ -946,112 +929,152 @@ float fetchBulletRotation() {
 */
 /******************************************************************************/
 void checkBulletAsteroidCollisions() {
-	std::lock_guard<std::mutex> lockAsteroids(asteroidsMutex);
-	Client::lockBullets();
-
 	std::vector<std::string> destroyedAsteroids;
 	std::vector<std::string> destroyedBulletIDs;
 	std::vector<GameObjInst*> destroyedLocalBullets;
 
-	int playerID = Client::getPlayerID();
+	int playerID = GameClient::getPlayerID();
 
-	for (auto& asteroidPair : asteroids)
+	// === PART 1: Lock asteroids and bullets together for collision check ===
 	{
-		if (!asteroidPair.second.isActive)
-			continue;
+		GameClient::ScopedAsteroidLock asteroidsLock;
+		GameClient::ScopedBulletLock playerLock;
 
-		// Build asteroid AABB
-		AABB asteroidAABB;
-		float halfSizeX = asteroidPair.second.scaleX * 0.5f;
-		float halfSizeY = asteroidPair.second.scaleY * 0.5f;
-		asteroidAABB.min.x = asteroidPair.second.currentX - halfSizeX;
-		asteroidAABB.min.y = asteroidPair.second.currentY - halfSizeY;
-		asteroidAABB.max.x = asteroidPair.second.currentX + halfSizeX;
-		asteroidAABB.max.y = asteroidPair.second.currentY + halfSizeY;
-
-		AEVec2 asteroidVel = { asteroidPair.second.velocityX * 120.0f, asteroidPair.second.velocityY * 120.0f };
-
-		bool asteroidDestroyed = false;
-
-		// Check network bullets
-		for (auto& bulletPair : bullets)
+		// Collision logic
+		for (auto& asteroidPair : asteroids)
 		{
-			if (!bulletPair.second.fromLocalPlayer)
+			if (!asteroidPair.second.isActive)
 				continue;
 
-			AABB bulletAABB;
-			float halfBulletX = BULLET_SCALE_X * 0.5f;
-			float halfBulletY = BULLET_SCALE_Y * 0.5f;
-			bulletAABB.min.x = bulletPair.second.X - halfBulletX;
-			bulletAABB.min.y = bulletPair.second.Y - halfBulletY;
-			bulletAABB.max.x = bulletPair.second.X + halfBulletX;
-			bulletAABB.max.y = bulletPair.second.Y + halfBulletY;
+			// Build asteroid AABB
+			AABB asteroidAABB;
+			float halfSizeX = asteroidPair.second.scaleX * 0.5f;
+			float halfSizeY = asteroidPair.second.scaleY * 0.5f;
+			asteroidAABB.min.x = asteroidPair.second.currentX - halfSizeX;
+			asteroidAABB.min.y = asteroidPair.second.currentY - halfSizeY;
+			asteroidAABB.max.x = asteroidPair.second.currentX + halfSizeX;
+			asteroidAABB.max.y = asteroidPair.second.currentY + halfSizeY;
 
-			AEVec2 bulletVel = { bulletPair.second.velocityX, bulletPair.second.velocityY };
+			AEVec2 asteroidVel = { asteroidPair.second.velocityX * 120.0f, asteroidPair.second.velocityY * 120.0f };
 
-			float tFirst = 0.0f;
-			if (CollisionIntersection_RectRect(bulletAABB, bulletVel, asteroidAABB, asteroidVel, tFirst))
+			bool asteroidDestroyed = false;
+
+			// Check network bullets
+			for (auto& bulletPair : bullets)
 			{
-				destroyedAsteroids.push_back(asteroidPair.first);
-				destroyedBulletIDs.push_back(bulletPair.first);
-				asteroidDestroyed = true;
-				break; // Done with this asteroid
-			}
-		}
-
-		// Check local bullets only if asteroid is not destroyed yet
-		if (!asteroidDestroyed)
-		{
-			for (auto* bullet : pBullets)
-			{
-				if (!bullet || !(bullet->flag & FLAG_ACTIVE))
+				if (!bulletPair.second.fromLocalPlayer)
 					continue;
 
 				AABB bulletAABB;
-				bulletAABB.min.x = bullet->posCurr.x - bullet->scale.x * 0.5f;
-				bulletAABB.min.y = bullet->posCurr.y - bullet->scale.y * 0.5f;
-				bulletAABB.max.x = bullet->posCurr.x + bullet->scale.x * 0.5f;
-				bulletAABB.max.y = bullet->posCurr.y + bullet->scale.y * 0.5f;
+				float halfBulletX = BULLET_SCALE_X * 0.5f;
+				float halfBulletY = BULLET_SCALE_Y * 0.5f;
+				bulletAABB.min.x = bulletPair.second.X - halfBulletX;
+				bulletAABB.min.y = bulletPair.second.Y - halfBulletY;
+				bulletAABB.max.x = bulletPair.second.X + halfBulletX;
+				bulletAABB.max.y = bulletPair.second.Y + halfBulletY;
+
+				AEVec2 bulletVel = { bulletPair.second.velocityX, bulletPair.second.velocityY };
 
 				float tFirst = 0.0f;
-				if (CollisionIntersection_RectRect(bulletAABB, bullet->velCurr, asteroidAABB, asteroidVel, tFirst))
+				if (CollisionIntersection_RectRect(bulletAABB, bulletVel, asteroidAABB, asteroidVel, tFirst))
 				{
 					destroyedAsteroids.push_back(asteroidPair.first);
-					destroyedLocalBullets.push_back(bullet);
+					destroyedBulletIDs.push_back(bulletPair.first);
 					asteroidDestroyed = true;
-					break;
+					break; // Done with this asteroid
+				}
+			}
+
+			// Check local bullets only if asteroid is not destroyed yet
+			if (!asteroidDestroyed)
+			{
+				for (auto* bullet : bulletArray)
+				{
+					if (!bullet || !(bullet->flag & FLAG_ACTIVE))
+						continue;
+
+					AABB bulletAABB;
+					bulletAABB.min.x = bullet->posCurr.x - bullet->scale.x * 0.5f;
+					bulletAABB.min.y = bullet->posCurr.y - bullet->scale.y * 0.5f;
+					bulletAABB.max.x = bullet->posCurr.x + bullet->scale.x * 0.5f;
+					bulletAABB.max.y = bullet->posCurr.y + bullet->scale.y * 0.5f;
+
+					float tFirst = 0.0f;
+					if (CollisionIntersection_RectRect(bulletAABB, bullet->velCurr, asteroidAABB, asteroidVel, tFirst))
+					{
+						destroyedAsteroids.push_back(asteroidPair.first);
+						destroyedLocalBullets.push_back(bullet);
+						asteroidDestroyed = true;
+						break;
+					}
 				}
 			}
 		}
 	}
 
-	// Apply destructions after loop
-	for (const auto& asteroidID : destroyedAsteroids)
+	// === PART 2: Lock bullets alone to erase them ===
 	{
-		globalClient.sendAsteroidDestructionEvent(asteroidID);
-		asteroids[asteroidID].isActive = false;
+		GameClient::ScopedBulletLock lock;
 
-		// Give score
-		if (players.find(playerID) != players.end())
-		{
-			players[playerID].score += 100;
-			globalClient.sendScoreUpdateEvent(players[playerID].clientIP, players[playerID].score);
+		// Remove bullets
+		for (const auto& bulletID : destroyedBulletIDs) {
+			bullets.erase(bulletID);
 		}
 	}
 
-	// Remove bullets
-	for (const auto& bulletID : destroyedBulletIDs)
-	{
-		bullets.erase(bulletID);
-	}
-
+	// === PART 3: Local bullets (no lock needed because local) ===
 	for (auto* bullet : destroyedLocalBullets)
 	{
 		gameObjInstDestroy(bullet);
-		pBullets.erase(std::remove(pBullets.begin(), pBullets.end(), bullet), pBullets.end());
+		bulletArray.erase(std::remove(bulletArray.begin(), bulletArray.end(), bullet), bulletArray.end());
 	}
 
-	Client::unlockBullets();
+	// === PART 4: Lock asteroids again needed for destruction and players for score ===
+	{
+		GameClient::ScopedAsteroidLock asteroidsLock;
+		GameClient::ScopedPlayerLock playerLock;
+
+		// Apply destructions after loop
+		for (const auto& asteroidID : destroyedAsteroids)
+		{
+			globalClient.sendAsteroidDestructionEvent(asteroidID);
+			asteroids[asteroidID].isActive = false;
+
+			// Give score
+			if (players.find(playerID) != players.end())
+			{
+				players[playerID].score += 100;
+				globalClient.sendScoreUpdateEvent(players[playerID].clientIP, players[playerID].score);
+			}
+		}
+	}
+}
+
+/**
+ * @brief Updates asteroid positions using interpolation for smooth movement
+ */
+void updateAsteroidInterpolation() {
+	constexpr float INTERPOLATION_DURATION = 0.1f; // 100ms window
+
+	GameClient::ScopedAsteroidLock lock;
+	auto currentTime = std::chrono::steady_clock::now();
+
+	for (auto& pair : asteroids) {
+		auto& asteroid = pair.second;
+		if (!asteroid.isActive) continue;
+
+		float deltaTime = std::chrono::duration<float>(currentTime - asteroid.lastUpdateTime).count();
+
+		if (deltaTime < INTERPOLATION_DURATION) {
+			float interpolationFactor = deltaTime / INTERPOLATION_DURATION;
+			asteroid.currentX += (asteroid.targetX - asteroid.currentX) * interpolationFactor;
+			asteroid.currentY += (asteroid.targetY - asteroid.currentY) * interpolationFactor;
+		}
+		else {
+			asteroid.currentX = asteroid.targetX;
+			asteroid.currentY = asteroid.targetY;
+		}
+	}
 }
 
 /**
@@ -1062,7 +1085,7 @@ void checkBulletAsteroidCollisions() {
  * @param pData A map containing player data, keyed by player ID.
  */
 void synchronizeShips(std::unordered_map<int, PlayerData>& pData) {
-	int myID = Client::getPlayerID();
+	int myID = GameClient::getPlayerID();
 
 	// Clean up ships for players who left
 	for (auto it = shipMap.begin(); it != shipMap.end(); )
@@ -1157,11 +1180,10 @@ void renderAsteroids() {
 	// First update all asteroid interpolation
 	updateAsteroidInterpolation();
 
-	std::lock_guard<std::mutex> lock(asteroidsMutex);
+	GameClient::ScopedAsteroidLock lock;
 
 	// Iterate through all asteroids
 	for (const auto& pair : asteroids) {
-		const std::string& id = pair.first;
 		const AsteroidData& asteroid = pair.second;
 
 		if (!asteroid.isActive) {
@@ -1204,32 +1226,33 @@ void renderAsteroids() {
  * This function iterates over network bullets, skipping those from the local player, and renders them based on their position and velocity.
  */
 void renderNetworkBullets() {
-	Client::lockBullets();
 
-	std::vector<GameObjInst*> tempBullets; // Temporary list to manage instances
+	// Temporary list to manage instances
+	std::vector<GameObjInst*> tempBullets;
 
-	// Pre-create all temporary bullets
-	for (const auto& pair : bullets)
 	{
-		const BulletData& bullet = pair.second;
-
-		if (bullet.fromLocalPlayer)
-			continue; // Skip local bullets
-
-		AEVec2 scale = { BULLET_SCALE_X, BULLET_SCALE_Y };
-		AEVec2 pos = { bullet.X, bullet.Y };
-		AEVec2 vel = { bullet.velocityX, bullet.velocityY };
-
-		GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.direction);
-		if (pInst)
+		GameClient::ScopedBulletLock lock;
+		// Pre-create all temporary bullets
+		for (const auto& pair : bullets)
 		{
-			pInst->posCurr = pos;
-			pInst->dirCurr = bullet.direction;
-			tempBullets.push_back(pInst);
+			const BulletData& bullet = pair.second;
+
+			if (bullet.fromLocalPlayer)
+				continue; // Skip local bullets
+
+			AEVec2 scale = { BULLET_SCALE_X, BULLET_SCALE_Y };
+			AEVec2 pos = { bullet.X, bullet.Y };
+			AEVec2 vel = { bullet.velocityX, bullet.velocityY };
+
+			GameObjInst* pInst = gameObjInstCreate(TYPE_BULLET, &scale, &pos, &vel, bullet.direction);
+			if (pInst)
+			{
+				pInst->posCurr = pos;
+				pInst->dirCurr = bullet.direction;
+				tempBullets.push_back(pInst);
+			}
 		}
 	}
-
-	Client::unlockBullets(); // Unlock early after bullet copies are made
 
 	// Now render all temp bullets
 	for (GameObjInst* pInst : tempBullets)
