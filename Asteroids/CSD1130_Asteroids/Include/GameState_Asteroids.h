@@ -44,19 +44,25 @@ static AEVec2 finalBulletPosition;
 static float bulletRotate;
 AEVec2 fetchBulletPosition();
 float fetchBulletRotation();
-void renderNetworkBullets();
+void DrawBullets();
 
 // Asteroid state
-void renderAsteroids();
+void DrawAsteroids();
 void updateAsteroidInterpolation();
-void checkBulletAsteroidCollisions();
+void localRemoteActiveInstCheck();
 
 // Multiplayer sync
 void synchronizeShips(std::unordered_map<int, PlayerData>& pData);
-void renderNames(std::unordered_map<int, PlayerData>& pData);
-void displayScores();
+void DisplayScores(const std::unordered_map<int, PlayerData>& allPlayers, int localPlayerID);
+void SetUpRenderState();
+void SetUpTextRenderState();
+void DrawNames(std::unordered_map<int, PlayerData>& pData);
+void DrawGameObjects();
+void DrawGameOverScreen();
+void DrawPlayerScores();
 
 // Others
+AEVec2 GetNormalizedScreenPos(float x, float y);
 void AEMtx33Zero(AEMtx33* mtx);
 
 #endif

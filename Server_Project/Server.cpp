@@ -135,9 +135,9 @@ private:
     const int ASTEROID_SPAWN_BOUND_MIN_X = 1000;
     const float ASTEROID_SPAWN_BOUND_MAX_Y = 400.0f;
     const float ASTEROID_SPAWN_BOUND_MIN_Y = -400.0f;
-    const int ASTEROID_SPAWN_HBOUND_MAX_Y = 1000.0f;
-    const int ASTEROID_SPAWN_HBOUND_MIN_Y = 500.0f;
-    const int ASTEROID_SPEED_MIN = 110;
+    const int ASTEROID_SPAWN_HBOUND_MAX_Y = 1000;
+    const int ASTEROID_SPAWN_HBOUND_MIN_Y = 500;
+    const int ASTEROID_SPEED_MIN = 140;
     const float ASTEROID_SPAWN_INTERVAL = 1.0f;
     const float ASTEROID_UPDATE_INTERVAL = 0.05f;
     const float BULLET_LIFETIME_SECONDS = 2.0f;
@@ -235,8 +235,7 @@ void GameServer::broadcastTimeUpdate() {
     std::string timeMessage = "TIME " + std::to_string(gameTimeRemaining) + "\n";
 
     for (auto& [_, player] : players) {
-        sendto(serverSocket, timeMessage.c_str(), timeMessage.size(), 0,
-            reinterpret_cast<sockaddr*>(&player.clientAddress), sizeof(player));
+        sendto(serverSocket, timeMessage.c_str(), static_cast<int>(timeMessage.size()), 0, reinterpret_cast<sockaddr*>(&player.clientAddress), sizeof(player));
     }
 }
 
@@ -334,23 +333,23 @@ void GameServer::spawnAsteroid() {
 
     switch (spawnSide) {
     case 0: // Top
-        positionX = (float)(rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X);
+        positionX = static_cast<float>((rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X));
         positionY = ASTEROID_SPAWN_BOUND_MAX_Y;
         break;
     case 1: // Right
-        positionX = ASTEROID_SPAWN_BOUND_MIN_X;
-        positionY = (float)(rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y);
+        positionX = static_cast<float>(ASTEROID_SPAWN_BOUND_MIN_X);
+        positionY = static_cast<float>((rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y));
         break;
     case 2: // Bottom
-        positionX = (float)(rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X);
+        positionX = static_cast<float>((rand() % ASTEROID_SPAWN_BOUND_MAX_X - ASTEROID_SPAWN_BOUND_MIN_X));
         positionY = ASTEROID_SPAWN_BOUND_MIN_Y;
         break;
     default: // Left
-        positionX = -ASTEROID_SPAWN_BOUND_MIN_X;
-        positionY = (float)(rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y);
+        positionX = static_cast<float>(-ASTEROID_SPAWN_BOUND_MIN_X);
+        positionY = static_cast<float>((rand() % ASTEROID_SPAWN_HBOUND_MAX_Y - ASTEROID_SPAWN_HBOUND_MIN_Y));
     }
 
-    float speed = (float)(rand() % ASTEROID_SPEED_MIN + ASTEROID_SPEED_MIN) / 1000.0f;
+    float speed = static_cast<float>((rand() % ASTEROID_SPEED_MIN + ASTEROID_SPEED_MIN) / 1000.0f);
     float directionX = 0.0f - positionX;
     float directionY = 0.0f - positionY;
 
@@ -461,8 +460,7 @@ void GameServer::broadcastAsteroidData(SOCKET socket) {
     }
 
     for (const auto& [_, player] : players) {
-        sendto(socket, asteroidData.c_str(), asteroidData.size(), 0,
-            (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+        sendto(socket, asteroidData.c_str(), static_cast<int>(asteroidData.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
     }
 }
 
@@ -480,8 +478,7 @@ void GameServer::handleAsteroidCollision(const std::string& asteroidId) {
 
         std::string destructionMessage = "DESTROY_ASTEROID|" + asteroidId;
         for (const auto& [_, player] : players) {
-            sendto(serverSocket, destructionMessage.c_str(), destructionMessage.size(), 0,
-                (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+            sendto(serverSocket, destructionMessage.c_str(), static_cast<int>(destructionMessage.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
         }
 
         asteroids.erase(asteroid);
@@ -637,7 +634,7 @@ void GameServer::processClientMessage(UdpClientMessage message) {
         playerIt->second.positionX = positionX;
         playerIt->second.positionY = positionY;
         playerIt->second.rotation = rotation;
-        playerIt->second.score = std::fmax(score, playerIt->second.score);
+        playerIt->second.score = static_cast<int>(std::fmax(score, playerIt->second.score));
         playerIt->second.lastActivityTime = std::chrono::steady_clock::now();
     }
     else {
@@ -676,20 +673,18 @@ void GameServer::processClientMessage(UdpClientMessage message) {
         newPlayer.positionX = positionX;
         newPlayer.positionY = positionY;
         newPlayer.rotation = rotation;
-        newPlayer.score = std::fmax(savedScore, score);
+        newPlayer.score = static_cast<int>(std::fmax(savedScore, score));
         newPlayer.clientAddress = clientAddress;
         newPlayer.ipAddress = clientIp;
         newPlayer.lastActivityTime = std::chrono::steady_clock::now();
 
         players[clientKey] = newPlayer;
 
-        sendto(serverSocket, newPlayer.id.c_str(), newPlayer.id.size(), 0,
-            (sockaddr*)&newPlayer.clientAddress, sizeof(newPlayer));
+        sendto(serverSocket, newPlayer.id.c_str(), static_cast<int>(newPlayer.id.size()), 0, (sockaddr*)&newPlayer.clientAddress, sizeof(newPlayer));
 
         std::string scoreUpdate = "SCORE_UPDATE|" + newPlayer.id + " " + std::to_string(newPlayer.score);
         for (const auto& [_, player] : players) {
-            sendto(serverSocket, scoreUpdate.c_str(), scoreUpdate.size(), 0,
-                (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+            sendto(serverSocket, scoreUpdate.c_str(), static_cast<int>(scoreUpdate.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
         }
     }
 }
@@ -712,8 +707,7 @@ void GameServer::sendPlayerStateToClients(SOCKET socket) {
     }
 
     for (const auto& [_, player] : players) {
-        sendto(socket, playerData.c_str(), playerData.size(), 0,
-            (sockaddr*)&player.clientAddress, sizeof(player));
+        sendto(socket, playerData.c_str(), static_cast<int>(playerData.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player));
     }
 }
 
@@ -737,8 +731,7 @@ void GameServer::broadcastBulletData(SOCKET socket) {
     }
 
     for (const auto& [_, player] : players) {
-        sendto(socket, bulletData.c_str(), bulletData.size(), 0,
-            (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+        sendto(socket, bulletData.c_str(), static_cast<int>(bulletData.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
     }
 }
 
@@ -796,8 +789,7 @@ void GameServer::broadcastPlayerScore(const PlayerData& player) {
     std::string scoreMessage = "SCORE_UPDATE|" + player.id + " " + std::to_string(player.score);
 
     for (const auto& [_, player] : players) {
-        sendto(serverSocket, scoreMessage.c_str(), scoreMessage.size(), 0,
-            (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+        sendto(serverSocket, scoreMessage.c_str(), static_cast<int>(scoreMessage.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
     }
 }
 
@@ -830,6 +822,6 @@ void GameServer::shutdown() {
     std::lock_guard<std::mutex> lock(clientsMutex);
 
     for (const auto& [_, player] : players) {
-        sendto(serverSocket, shutdownMsg.c_str(), shutdownMsg.size(), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
+        sendto(serverSocket, shutdownMsg.c_str(), static_cast<int>(shutdownMsg.size()), 0, (sockaddr*)&player.clientAddress, sizeof(player.clientAddress));
     }
 }

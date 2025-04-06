@@ -829,7 +829,7 @@ void GameStateAsteroidsUpdate(void)
 	}
 
 	updateAsteroidInterpolation();
-	checkBulletAsteroidCollisions();
+	localRemoteActiveInstCheck();
 	synchronizeShips(players);
 
 	// Tracking local player ship
@@ -853,32 +853,10 @@ void GameStateAsteroidsUpdate(void)
 /******************************************************************************/
 void GameStateAsteroidsDraw(void)
 {
-	// Set up rendering settings
-	AEGfxSetRenderMode(AE_GFX_RM_COLOR); /**< Set render mode to color. */
-	AEGfxTextureSet(NULL, 0, 0); /**< No texture is set for rendering. */
-	AEGfxSetBlendMode(AE_GFX_BM_BLEND); /**< Enable blending for transparency. */
-	AEGfxSetTransparency(1.0f); /**< Full opacity (no transparency). */
-
-	// Iterate through all game object instances and render active ones
-	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
-	{
-		GameObjInst* pInst = sGameObjInstList + i; /**< Access the current game object instance. */
-
-		// Skip inactive objects
-		if ((pInst->flag & FLAG_ACTIVE) == 0) {
-			continue;
-		}
-
-		// Set the transform matrix for the current object
-		AEGfxSetTransform(pInst->transform.m);
-
-		// Draw the object using its mesh
-		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
-	}
-
-	// Render the asteroids and network bullets
-	renderAsteroids();
-	renderNetworkBullets();
+	SetUpRenderState();
+	DrawGameObjects();
+	DrawAsteroids();
+	DrawBullets();
 
 	if (updateValue)
 	{
@@ -888,32 +866,11 @@ void GameStateAsteroidsDraw(void)
 	// Display winner if the game is over
 	if (endGame)
 	{
-		// Render "GAME OVER" message
-		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
-		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
-		AEGfxTextureSet(NULL, 0, 0);
-		AEGfxSetTransparency(1.0f);
-
-		AEGfxPrint(fontId, "GAME OVER", -0.45f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
-
-		char winText[64];
-		if (winningPlayerID != -1) {
-			snprintf(winText, sizeof(winText), "Player %d Wins!", winningPlayerID);
-		}
-		else {
-			snprintf(winText, sizeof(winText), "YOU WIN");
-		}
-		AEGfxPrint(fontId, winText, -0.3f, -0.70f, 2.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+		DrawGameOverScreen();
 	}
 
-	// Render player names on the screen
-	renderNames(players);
-
-	// Display scores for each player
-	for (auto p : players)
-	{
-		displayScores();
-	}
+	DrawNames(players);
+	DrawPlayerScores();
 }
 
 /******************************************************************************/
@@ -1036,7 +993,7 @@ float fetchBulletRotation() {
 	to notify about the destruction of the asteroid and the update of the player's score.
 */
 /******************************************************************************/
-void checkBulletAsteroidCollisions() {
+void localRemoteActiveInstCheck() {
 	std::vector<std::string> destroyedAsteroids;
 	std::vector<std::string> destroyedBulletIDs;
 	std::vector<GameObjInst*> destroyedLocalBullets;
@@ -1241,40 +1198,47 @@ void synchronizeShips(std::unordered_map<int, PlayerData>& pData) {
  *
  * @param pData A map containing player data, keyed by player ID.
  */
-void renderNames(std::unordered_map<int, PlayerData>& pData) {
-	// Iterate through each player in the unordered map (pData)
-	for (const auto& pair : pData) {
-		const PlayerData& player = pair.second; // Retrieve player data from the map entry
+void DrawNames(std::unordered_map<int, PlayerData>& pData) {
+	// Cache window boundaries and dimensions ONCE
+	f32 winMinX = AEGfxGetWinMinX();
+	f32 winMaxX = AEGfxGetWinMaxX();
+	f32 winMinY = AEGfxGetWinMinY();
+	f32 winMaxY = AEGfxGetWinMaxY();
+
+	f32 windowWidth = winMaxX - winMinX;
+	f32 windowHeight = winMaxY - winMinY;
+
+	// Setup render state ONCE
+	AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+	AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+	AEGfxTextureSet(NULL, 0, 0);
+	AEGfxSetTransparency(1.0f);
+
+	// Draw player names
+	for (const auto& pair : pData)
+	{
+		const PlayerData& player = pair.second;
 
 		AEVec2 position;
-		f32 normalizedX, normalizedY;
-
-		// Set the player's position based on the player data (X, Y coordinates)
 		AEVec2Set(&position, player.X, player.Y);
 
-		// Wrap the player's position within the window bounds to handle screen boundaries
-		f32 wrappedX = AEWrap(position.x, AEGfxGetWinMinX() - SHIP_SCALE_X, AEGfxGetWinMaxX() + SHIP_SCALE_X);
-		f32 wrappedY = AEWrap(position.y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y);
+		// Wrap the position
+		f32 wrappedX = AEWrap(position.x, winMinX - SHIP_SCALE_X, winMaxX + SHIP_SCALE_X);
+		f32 wrappedY = AEWrap(position.y, winMinY - SHIP_SCALE_Y, winMaxY + SHIP_SCALE_Y);
 
-		// Normalize the wrapped position to fit within the normalized screen space [-1, 1]
-		normalizedX = (wrappedX - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX()) * 2.0f - 1.0f;
-		normalizedY = (wrappedY - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY()) * 2.0f - 1.0f;
+		// Normalize to screen space [-1, 1]
+		f32 normalizedX = ((wrappedX - winMinX) / windowWidth) * 2.0f - 1.0f;
+		f32 normalizedY = ((wrappedY - winMinY) / windowHeight) * 2.0f - 1.0f;
 
-		// Apply slight offsets for visual positioning adjustments
+		// Offset for better name placement
 		normalizedX -= 0.2f;
 		normalizedY += 0.1f;
 
-		// Convert the player ID to a string format (e.g., "Player 1")
+		// Format player name
 		char nameBuffer[100];
 		snprintf(nameBuffer, sizeof(nameBuffer), "Player %d", pair.first);
 
-		// Set rendering properties for drawing the player name
-		AEGfxSetRenderMode(AE_GFX_RM_COLOR);  // Set render mode to color
-		AEGfxSetBlendMode(AE_GFX_BM_BLEND);   // Enable blending for transparency
-		AEGfxTextureSet(NULL, 0, 0);          // Set texture to NULL (no texture)
-		AEGfxSetTransparency(1.0f);           // Set full opacity
-
-		// Render the player's name at the calculated normalized position on screen
+		// Render the name
 		AEGfxPrint(fontId, nameBuffer, normalizedX, normalizedY, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }
@@ -1284,7 +1248,7 @@ void renderNames(std::unordered_map<int, PlayerData>& pData) {
  *
  * This function updates asteroid interpolation and renders them with correct transformations.
  */
-void renderAsteroids() {
+void DrawAsteroids() {
 	// First update all asteroid interpolation
 	updateAsteroidInterpolation();
 
@@ -1333,7 +1297,7 @@ void renderAsteroids() {
  *
  * This function iterates over network bullets, skipping those from the local player, and renders them based on their position and velocity.
  */
-void renderNetworkBullets() {
+void DrawBullets() {
 
 	// Temporary list to manage instances
 	std::vector<GameObjInst*> tempBullets;
@@ -1345,8 +1309,9 @@ void renderNetworkBullets() {
 		{
 			const BulletData& bullet = pair.second;
 
-			if (bullet.fromLocalPlayer)
+			if (bullet.fromLocalPlayer) {
 				continue; // Skip local bullets
+			}
 
 			AEVec2 scale = { BULLET_SCALE_X, BULLET_SCALE_Y };
 			AEVec2 pos = { bullet.X, bullet.Y };
@@ -1383,17 +1348,142 @@ void renderNetworkBullets() {
 	}
 }
 
+/******************************************************************************/
+/*!
+	@brief Sets up the rendering state for 2D drawing.
+
+	This function configures the graphics engine to use color rendering, enables
+	alpha blending for transparency, and binds no textures. Should be called before
+	drawing game objects or UI elements.
+*/
+/******************************************************************************/
+void SetUpRenderState()
+{
+	AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+	AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+	AEGfxSetTransparency(1.0f);
+	AEGfxTextureSet(nullptr, 0, 0);
+}
+
+/******************************************************************************/
+/*!
+	@brief Sets up the rendering state for displaying text.
+
+	This function configures the graphics engine to use color rendering,
+	enables alpha blending for transparency, unbinds any texture,
+	and sets full transparency (alpha = 1.0f).
+	Should be called before printing any text (e.g., scores, messages).
+*/
+/******************************************************************************/
+void SetUpTextRenderState()
+{
+	AEGfxSetRenderMode(AE_GFX_RM_COLOR);
+	AEGfxSetBlendMode(AE_GFX_BM_BLEND);
+	AEGfxTextureSet(nullptr, 0, 0);
+	AEGfxSetTransparency(1.0f);
+}
+
+/******************************************************************************/
+/*!
+	@brief Draws all active game object instances.
+
+	Iterates through all object instances in the global list and renders any
+	instance flagged as active by applying its transform and mesh.
+*/
+/******************************************************************************/
+void DrawGameObjects()
+{
+	for (unsigned long i = 0; i < GAME_OBJ_INST_NUM_MAX; i++)
+	{
+		GameObjInst* pInst = sGameObjInstList + i;
+		if ((pInst->flag & FLAG_ACTIVE) == 0) {
+			continue;
+		}
+
+		AEGfxSetTransform(pInst->transform.m);
+		AEGfxMeshDraw(pInst->pObject->pMesh, AE_GFX_MDM_TRIANGLES);
+	}
+}
+
+/******************************************************************************/
+/*!
+	@brief Displays the "Game Over" screen.
+
+	If a winning player ID exists, their victory message is shown.
+	Otherwise, a general "YOU WIN" message is displayed at the center of the screen.
+*/
+/******************************************************************************/
+void DrawGameOverScreen()
+{
+	SetUpRenderState(); // Ensure transparency is correct for text
+
+	char winText[64];
+	if (winningPlayerID != -1)
+		snprintf(winText, sizeof(winText), "Player %d Wins!", winningPlayerID);
+	else
+		snprintf(winText, sizeof(winText), "YOU WIN");
+
+
+	AEGfxPrint(fontId, "GAME OVER", -0.45f, 0.0f, 3.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+}
+
+/******************************************************************************/
+/*!
+	@brief Draws scores for all players.
+
+	Loops through all player entries and renders their current scores on the screen.
+	Highlights the local player's score if applicable.
+*/
+/******************************************************************************/
+void DrawPlayerScores()
+{
+	for (auto& p : players)
+	{
+		DisplayScores(players, p.first);
+	}
+}
+
+/******************************************************************************/
+/*!
+	@brief Calculates normalized screen coordinates for a given world position.
+
+	This function converts a given (x, y) world position into normalized
+	screen space coordinates in the range [-1, 1], adjusting with a small
+	horizontal and vertical offset to better align text displays.
+
+	@param x The world-space x position.
+	@param y The world-space y position.
+	@return AEVec2 The normalized screen-space position.
+*/
+/******************************************************************************/
+AEVec2 GetNormalizedScreenPos(float x, float y)
+{
+	float winMinX = AEGfxGetWinMinX();
+	float winMaxX = AEGfxGetWinMaxX();
+	float winMinY = AEGfxGetWinMinY();
+	float winMaxY = AEGfxGetWinMaxY();
+
+	float normalizedX = ((x - winMinX) / (winMaxX - winMinX)) * 2.0f - 1.0f - 0.2f;
+	float normalizedY = ((y - winMinY) / (winMaxY - winMinY)) * 2.0f - 1.0f + 0.1f;
+
+	return { normalizedX, normalizedY };
+}
+
 /**
- * @brief Displays the scores of all players, highlighting the local player’s score.
+ * @brief Displays the scores of all players, highlighting the local player?s score.
  *
  * This function iterates through all players, renders their score at the correct position, and highlights the local player's score in green.
  *
  * @param gamePlayers A map containing player data, keyed by player ID.
  * @param playerID The local player's ID.
  */
-void displayScores() {
-	for (const auto& pair : players) {
-		const int id = pair.first;
+void DisplayScores(const std::unordered_map<int, PlayerData>& allPlayers, int localPlayerID)
+{
+	SetUpTextRenderState();
+
+	for (const auto& pair : allPlayers)
+	{
+		int id = pair.first;
 		const PlayerData& player = pair.second;
 
 		AEVec2 wrappedPos = {
@@ -1401,18 +1491,19 @@ void displayScores() {
 			AEWrap(player.Y, AEGfxGetWinMinY() - SHIP_SCALE_Y, AEGfxGetWinMaxY() + SHIP_SCALE_Y)
 		};
 
-		float normalizedX = ((wrappedPos.x - AEGfxGetWinMinX()) / (AEGfxGetWinMaxX() - AEGfxGetWinMinX())) * 2.0f - 1.0f - 0.2f;
-		float normalizedY = ((wrappedPos.y - AEGfxGetWinMinY()) / (AEGfxGetWinMaxY() - AEGfxGetWinMinY())) * 2.0f - 1.0f + 0.1f;
+		AEVec2 screenPos = GetNormalizedScreenPos(wrappedPos.x, wrappedPos.y);
 
 		char scoreText[64];
 		snprintf(scoreText, sizeof(scoreText), "Player %d: %d points", id, player.score);
 
-		AEGfxSetRenderMode(AE_GFX_RM_COLOR);
-		AEGfxSetBlendMode(AE_GFX_BM_BLEND);
-		AEGfxTextureSet(NULL, 0, 0);
-		AEGfxSetTransparency(1.0f);
-
-		AEGfxPrint(fontId, scoreText, normalizedX, normalizedY, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+		if (id == localPlayerID)
+		{
+			AEGfxPrint(fontId, scoreText, screenPos.x, screenPos.y, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		else
+		{
+			AEGfxPrint(fontId, scoreText, screenPos.x, screenPos.y, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+		}
 	}
 }
 

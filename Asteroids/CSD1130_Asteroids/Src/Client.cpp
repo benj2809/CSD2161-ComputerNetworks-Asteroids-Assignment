@@ -454,7 +454,7 @@ void GameClient::updatePlayersFromNetwork(const std::string& data) {
     while (str >> p.playerID >> p.X >> p.Y >> p.rotation >> p.score >> p.clientIP) {
         players[p.playerID] = p;
     }
-    playerCount = players.size();
+    playerCount = static_cast<int>(players.size());
 }
 
 /* ======================= GAME EVENT REPORTING METHODS ======================= */
